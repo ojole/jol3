@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Soft Retro Anime Aesthetic Color Tokens */
+  --color-paper-bg: #fef5f7;
+  --color-paper-dark: #f5e8eb;
+  --color-border-light: #ffc4d6;
+  --color-border-dark: #b89fa5;
+  --color-text-primary: #5a3a45;
+  --color-text-secondary: #8a6a75;
+  --color-accent-primary: #ff94b8;
+  --color-accent-hover: #ff7aa3;
+  --color-window-bg: #ffffff;
+  --color-window-shadow: rgba(185, 159, 165, 0.2);
+  --color-icon-hover: #ffe5ee;
+  --color-icon-selected: #ffc4d6;
+
+  /* Layout Heights and Safe Areas */
+  --topbar-height: 40px;
+  --taskbar-height-desktop: 44px;
+  --taskbar-height-mobile: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100dvh;
+  height: 100vh; /* Fallback for older browsers */
+  overflow: hidden;
+}
+
+body {
+  background: var(--color-paper-bg);
+  color: var(--color-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Paper Texture Background */
+.desktop-bg {
+  background-color: var(--color-paper-bg);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3CfeColorMatrix values='0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 0.02 0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+  background-blend-mode: multiply;
+}
+
+/* Subtle Scanline Overlay */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.02) 2px,
+    rgba(0, 0, 0, 0.02) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Window Shadow Depth */
+.window-shadow {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8),
+    0 2px 4px var(--color-window-shadow),
+    0 8px 16px var(--color-window-shadow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Icon States - Soft Retro Style */
+.desktop-icon {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.desktop-icon:hover {
+  background: var(--color-icon-hover);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(255, 180, 210, 0.3);
+}
+
+.desktop-icon:focus,
+.desktop-icon.selected {
+  background: var(--color-icon-selected);
+  outline: 3px solid var(--color-accent-primary);
+  outline-offset: 2px;
+  box-shadow: 0 6px 16px rgba(255, 148, 184, 0.4);
+}
+
+/* Button Styles */
+.btn-primary {
+  background: var(--color-accent-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(200, 90, 61, 0.3);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(200, 90, 61, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Window Title Bar */
+.window-titlebar {
+  background: linear-gradient(180deg, #f8f6f0 0%, #e8e4d8 100%);
+  border-bottom: 1px solid var(--color-border-dark);
+  cursor: move;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-paper-dark);
+  border: 1px solid var(--color-border-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border: 2px solid var(--color-paper-dark);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-paper-dark);
+}
+
+/* Utility Classes */
+.text-retro {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.02em;
+}
+
+.border-retro {
+  border: 2px solid var(--color-border-dark);
+  border-top-color: var(--color-border-light);
+  border-left-color: var(--color-border-light);
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* Pixelated icon rendering */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Disable Next.js dev overlays */
+#__next-build-watcher,
+nextjs-portal,
+[data-nextjs-scroll-focus-boundary],
+nextjs-portal-root {
+  display: none !important;
+}

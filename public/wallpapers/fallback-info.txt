@@ -1,0 +1,13 @@
+# Fallback Wallpaper
+
+Place a fallback wallpaper image here named `fallback.png` or `fallback.jpg`.
+
+This will be used as the immediate background while AI wallpaper generates.
+
+Recommended specs:
+- Size: 1920x1080 or larger
+- Format: PNG or JPEG
+- Style: Retro pixel art or solid color with subtle texture
+- Work-safe, professional
+
+If no fallback exists, a gradient will be used.
