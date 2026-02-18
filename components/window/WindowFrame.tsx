@@ -41,7 +41,9 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       case 'projects': return '/icons/folder.png'
       case 'resume': return '/icons/notepad.png'
       case 'about': return '/icons/notepad.png'
-      case 'emcrypted': return '/icons/url-shortcut.png'
+      case 'emcrypted': return '/icons/emcrypted.png'
+      case 'faiv': return '/icons/faiv.png'
+      case 'contact': return '/icons/sticky.png'
       default: return '/icons/notepad.png'
     }
   }
@@ -60,7 +62,53 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
         height: window.height,
       }
 
-  const windowContent = (
+  const isStickyNote = window.windowType === 'contact'
+
+  const windowContent = isStickyNote ? (
+    <div
+      ref={frameRef}
+      className="absolute pointer-events-auto rounded-sm overflow-hidden flex flex-col"
+      style={{
+        ...style,
+        zIndex: window.zIndex,
+        background: 'linear-gradient(135deg, #fff9c4 0%, #fff59d 50%, #fff176 100%)',
+        border: '2px solid #e6d88a',
+        boxShadow: '0 4px 16px rgba(120, 100, 40, 0.2), 0 1px 3px rgba(120, 100, 40, 0.15)',
+      }}
+      onMouseDown={handleMouseDown}
+      tabIndex={-1}
+      role="dialog"
+      aria-label={window.title}
+    >
+      {/* Sticky Note Header - minimal, just a close X */}
+      <div
+        className="window-titlebar flex items-center justify-end px-2 py-1 select-none cursor-move"
+        style={{ minHeight: '28px' }}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            closeWindow(window.id)
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            closeWindow(window.id)
+          }}
+          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center text-[#8a7a5a] hover:text-[#5d4e37] transition-colors touch-manipulation rounded-sm hover:bg-[#f0e68c]"
+          style={{ touchAction: 'manipulation' }}
+          aria-label="Close window"
+        >
+          <span className="text-sm leading-none font-bold pointer-events-none">×</span>
+        </button>
+      </div>
+
+      {/* Sticky Note Content */}
+      <div className="flex-1 overflow-auto">
+        {children}
+      </div>
+    </div>
+  ) : (
     <div
       ref={frameRef}
       className="absolute pointer-events-auto bg-white rounded-md overflow-hidden flex flex-col shadow-2xl"
@@ -120,14 +168,19 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
           </h3>
         </div>
 
-        <div className="flex items-center gap-1 relative z-10">
+        <div className="flex items-center gap-1.5 md:gap-1 relative z-10">
           {/* Minimize Button */}
           <button
             onClick={(e) => {
               e.stopPropagation()
               minimizeWindow(window.id)
             }}
-            className="w-6 h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
+            onTouchEnd={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              minimizeWindow(window.id)
+            }}
+            className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
             style={{ touchAction: 'manipulation' }}
             aria-label="Minimize window"
           >
@@ -140,7 +193,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
               e.stopPropagation()
               toggleMaximize(window.id)
             }}
-            className="w-6 h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
+            onTouchEnd={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              toggleMaximize(window.id)
+            }}
+            className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
             style={{ touchAction: 'manipulation' }}
             aria-label={window.isMaximized ? 'Restore window' : 'Maximize window'}
           >
@@ -153,7 +211,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
               e.stopPropagation()
               closeWindow(window.id)
             }}
-            className="w-6 h-6 bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] rounded-sm transition-colors flex items-center justify-center text-white font-bold touch-manipulation"
+            onTouchEnd={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              closeWindow(window.id)
+            }}
+            className="w-9 h-9 md:w-6 md:h-6 bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] rounded-sm transition-colors flex items-center justify-center text-white font-bold touch-manipulation"
             style={{ touchAction: 'manipulation' }}
             aria-label="Close window"
           >

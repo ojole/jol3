@@ -11,7 +11,7 @@ export default function DynamicFavicon() {
         link.rel = 'icon'
         document.head.appendChild(link)
       }
-      link.href = '/icons/url-shortcut.png'
+      link.href = '/icons/computer.png'
     }
 
     updateFavicon()

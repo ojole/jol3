@@ -136,7 +136,9 @@ export default function Taskbar() {
               case 'projects': return '/icons/folder.png'
               case 'resume': return '/icons/notepad.png'
               case 'about': return '/icons/notepad.png'
-              case 'emcrypted': return '/icons/url-shortcut.png'
+              case 'emcrypted': return '/icons/emcrypted.png'
+              case 'faiv': return '/icons/faiv.png'
+              case 'contact': return '/icons/sticky.png'
               default: return '/icons/notepad.png'
             }
           }

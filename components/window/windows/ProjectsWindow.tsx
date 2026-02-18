@@ -23,13 +23,22 @@ export default function ProjectsWindow() {
             className="flex flex-col items-center gap-2 p-3 rounded hover:bg-[var(--color-icon-hover)] transition-colors cursor-pointer"
           >
             {item.iconImage && (
-              <div className="w-16 h-16 flex items-center justify-center">
+              <div className="w-16 h-16 flex items-center justify-center relative">
                 <Image
                   src={item.iconImage}
                   alt=""
                   width={64}
                   height={64}
                   className="w-full h-full object-contain"
+                  draggable={false}
+                />
+                {/* Shortcut arrow overlay */}
+                <Image
+                  src="/icons/arrow.png"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="absolute bottom-0 left-0 pixelated"
                   draggable={false}
                 />
               </div>

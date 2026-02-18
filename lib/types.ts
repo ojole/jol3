@@ -11,6 +11,7 @@ export type WindowType =
   | 'demo'
   | 'work-with-me'
   | 'emcrypted'
+  | 'faiv'
   | 'sora'
   | 'fishbowl-hypothesis'
   | 'dark-planet-hypothesis'

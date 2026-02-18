@@ -39,19 +39,38 @@ export const desktopItems: DesktopItem[] = [
     iconImage: getIconPath('txt'),
     order: 3,
   },
+  {
+    id: 'contact',
+    label: 'contact.notes',
+    type: 'txt',
+    side: 'left',
+    windowType: 'contact',
+    iconImage: '/icons/sticky.png',
+    order: 4,
+  },
 ]
 
 // Projects folder contents
 export const projectsFolderItems: DesktopItem[] = [
   {
     id: 'emcrypted',
-    label: 'emcrypted.www',
+    label: 'emcrypted.com',
     type: 'url',
     side: 'left',
     windowType: 'emcrypted',
-    iconImage: getIconPath('url'),
+    iconImage: '/icons/emcrypted.png',
     url: 'https://emcrypted.com',
     order: 1,
+  },
+  {
+    id: 'faiv',
+    label: 'faiv.ai',
+    type: 'url',
+    side: 'left',
+    windowType: 'faiv',
+    iconImage: '/icons/faiv.png',
+    url: 'https://faiv.ai',
+    order: 2,
   },
 ]
 

@@ -40,13 +40,21 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     let y = 80 + (windows.length * 30)
     let isMaximized = false
 
-    if (isMobile) {
-      // On mobile, maximize windows by default
+    // Sticky note gets smaller dimensions
+    const isStickyNote = windowType === 'contact'
+
+    if (isMobile && !isStickyNote) {
+      // On mobile, maximize windows by default (except sticky notes)
       isMaximized = true
       width = viewportWidth
       height = viewportHeight
       x = 0
       y = 0
+    } else if (isStickyNote) {
+      width = isMobile ? Math.min(280, viewportWidth - 40) : 260
+      height = 200
+      x = isMobile ? 20 : Math.min(200 + (windows.length * 30), viewportWidth - width - 50)
+      y = isMobile ? 100 : Math.min(120 + (windows.length * 30), viewportHeight - height - 100)
     } else {
       // On desktop, ensure window fits in viewport
       const maxWidth = Math.min(800, viewportWidth - 100)

@@ -75,7 +75,7 @@ body {
     rgba(0, 0, 0, 0.02) 4px
   );
   pointer-events: none;
-  z-index: 1000;
+  z-index: 0;
 }
 
 /* Window Shadow Depth */

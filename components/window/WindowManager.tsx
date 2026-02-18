@@ -5,7 +5,7 @@ import WindowFrame from './WindowFrame'
 import AboutWindow from './windows/AboutWindow'
 import ResumeWindow from './windows/ResumeWindow'
 import ProjectsWindow from './windows/ProjectsWindow'
-import ContactWindow from './windows/ContactWindow'
+import StickyNoteWindow from './windows/StickyNoteWindow'
 import IframeWindow from './windows/IframeWindow'
 import { WindowType } from '@/lib/types'
 import { projectsFolderItems } from '@/data/desktopItems'
@@ -22,10 +22,14 @@ export default function WindowManager() {
       case 'projects':
         return <ProjectsWindow />
       case 'contact':
-        return <ContactWindow />
+        return <StickyNoteWindow />
       case 'emcrypted': {
         const emcryptedItem = projectsFolderItems.find(item => item.id === 'emcrypted')
         return <IframeWindow url={emcryptedItem?.url || 'https://emcrypted.com'} title="emcrypted" />
+      }
+      case 'faiv': {
+        const faivItem = projectsFolderItems.find(item => item.id === 'faiv')
+        return <IframeWindow url={faivItem?.url || 'https://faiv.ai'} title="faiv" />
       }
       default:
         return (
