@@ -8,9 +8,9 @@ export default function Taskbar() {
   const [startMenuOpen, setStartMenuOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
-  const { windows, openWindow, focusWindow, minimizeWindow } = useWindowStore()
+  const startBtnRef = useRef<HTMLButtonElement>(null)
+  const { windows, openWindow, focusWindow } = useWindowStore()
 
-  // Update clock every second for more responsiveness
   useEffect(() => {
     const updateClock = () => {
       const now = new Date()
@@ -22,16 +22,18 @@ export default function Taskbar() {
       setCurrentTime(time)
     }
 
-    updateClock() // Initial call
-    const interval = setInterval(updateClock, 1000) // Update every second
-
+    updateClock()
+    const interval = setInterval(updateClock, 1000)
     return () => clearInterval(interval)
   }, [])
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside (but not the start button itself)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(event.target as Node) &&
+        startBtnRef.current && !startBtnRef.current.contains(event.target as Node)
+      ) {
         setStartMenuOpen(false)
       }
     }
@@ -45,7 +47,6 @@ export default function Taskbar() {
     }
   }, [startMenuOpen])
 
-  // Close menu on Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && startMenuOpen) {
@@ -62,16 +63,15 @@ export default function Taskbar() {
     }
   }, [startMenuOpen])
 
-  const handleContactClick = () => {
+  const handleSnakeClick = () => {
     setStartMenuOpen(false)
-    window.location.href = 'mailto:jol3@jol3.com'
+    openWindow('snake', 'Snake')
   }
 
   const handleTaskButtonClick = (windowId: string) => {
     focusWindow(windowId)
   }
 
-  // Get active window (highest z-index)
   const activeWindowId = windows.length > 0
     ? [...windows].sort((a, b) => b.zIndex - a.zIndex)[0]?.id
     : null
@@ -85,9 +85,10 @@ export default function Taskbar() {
         minHeight: 'calc(var(--taskbar-height-mobile) + var(--safe-bottom))',
       }}
     >
-      {/* Start Button - Soft Retro Style */}
+      {/* Start Button - Toggle open/close */}
       <button
-        onClick={() => setStartMenuOpen(!startMenuOpen)}
+        ref={startBtnRef}
+        onClick={() => setStartMenuOpen(prev => !prev)}
         className={`
           px-4 py-1.5 text-[13px] font-bold
           flex items-center gap-2
@@ -105,7 +106,7 @@ export default function Taskbar() {
         <span className="text-[var(--color-text-primary)]">Start</span>
       </button>
 
-      {/* Start Menu - Soft Retro Style */}
+      {/* Start Menu */}
       {startMenuOpen && (
         <div
           ref={menuRef}
@@ -113,11 +114,19 @@ export default function Taskbar() {
         >
           <div className="p-1">
             <button
-              onClick={handleContactClick}
+              onClick={handleSnakeClick}
               className="w-full px-4 py-2.5 text-left text-[13px] text-[var(--color-text-primary)] hover:bg-[#d5c5ca] hover:text-[#5a3a45] transition-colors flex items-center gap-2.5 rounded-sm font-medium"
               type="button"
             >
-              <span>Contact jol3</span>
+              <Image
+                src="/icons/snake.png"
+                alt=""
+                width={16}
+                height={16}
+                className="flex-shrink-0 pixelated"
+                draggable={false}
+              />
+              <span>Snake</span>
             </button>
           </div>
         </div>
@@ -126,11 +135,10 @@ export default function Taskbar() {
       {/* Separator */}
       <div className="w-[3px] h-full bg-gradient-to-r from-[#d5c5ca] to-[#e8dfe0] flex-shrink-0 rounded-full opacity-40"></div>
 
-      {/* Task Buttons (Open Windows) - Soft Retro Style */}
+      {/* Task Buttons (Open Windows) */}
       <div className="flex-1 flex items-center gap-2 overflow-x-auto">
-        {windows.map((window) => {
-          const isActive = window.id === activeWindowId
-          // Get icon path based on window type
+        {windows.map((win) => {
+          const isActive = win.id === activeWindowId
           const getIconPath = (windowType: string) => {
             switch (windowType) {
               case 'projects': return '/icons/folder.png'
@@ -139,14 +147,15 @@ export default function Taskbar() {
               case 'emcrypted': return '/icons/emcrypted.png'
               case 'faiv': return '/icons/faiv.png'
               case 'contact': return '/icons/sticky.png'
+              case 'snake': return '/icons/snake.png'
               default: return '/icons/notepad.png'
             }
           }
 
           return (
             <button
-              key={window.id}
-              onClick={() => handleTaskButtonClick(window.id)}
+              key={win.id}
+              onClick={() => handleTaskButtonClick(win.id)}
               className={`
                 px-3 py-1 text-[12px] font-medium
                 flex items-center gap-2
@@ -159,18 +168,18 @@ export default function Taskbar() {
                   : 'border-[3px] border-t-[#fef4f5] border-l-[#fef4f5] border-b-[#b89fa5] border-r-[#b89fa5] bg-[#f0e5e8] hover:bg-[#f5eaed]'
                 }
               `}
-              title={window.title}
+              title={win.title}
               type="button"
             >
               <Image
-                src={getIconPath(window.windowType)}
+                src={getIconPath(win.windowType)}
                 alt=""
                 width={16}
                 height={16}
                 className="flex-shrink-0 pixelated"
                 draggable={false}
               />
-              <span className="text-[var(--color-text-primary)] truncate">{window.title}</span>
+              <span className="text-[var(--color-text-primary)] truncate">{win.title}</span>
             </button>
           )
         })}
@@ -179,7 +188,7 @@ export default function Taskbar() {
       {/* System Tray Separator */}
       <div className="w-[3px] h-full bg-gradient-to-r from-[#d5c5ca] to-[#e8dfe0] flex-shrink-0 rounded-full opacity-40"></div>
 
-      {/* Clock - Soft Retro Style */}
+      {/* Clock */}
       <div className="text-[11px] font-mono text-[var(--color-text-primary)] border-[3px] border-t-[#b89fa5] border-l-[#b89fa5] border-b-[#fef4f5] border-r-[#fef4f5] px-3 py-1 bg-[#f0e5e8] flex-shrink-0 min-w-[70px] text-center rounded-sm font-semibold">
         {currentTime}
       </div>

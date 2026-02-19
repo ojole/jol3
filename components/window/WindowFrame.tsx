@@ -44,6 +44,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       case 'emcrypted': return '/icons/emcrypted.png'
       case 'faiv': return '/icons/faiv.png'
       case 'contact': return '/icons/sticky.png'
+      case 'snake': return '/icons/snake.png'
       default: return '/icons/notepad.png'
     }
   }
@@ -80,10 +81,9 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       role="dialog"
       aria-label={window.title}
     >
-      {/* Sticky Note Header - minimal, just a close X */}
+      {/* Sticky Note Header - seamless, X matches border color */}
       <div
-        className="window-titlebar flex items-center justify-end px-2 py-1 select-none cursor-move"
-        style={{ minHeight: '28px' }}
+        className="window-titlebar flex items-center justify-end px-1.5 pt-1 select-none cursor-move"
       >
         <button
           onClick={(e) => {
@@ -95,8 +95,8 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             e.preventDefault()
             closeWindow(window.id)
           }}
-          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center text-[#8a7a5a] hover:text-[#5d4e37] transition-colors touch-manipulation rounded-sm hover:bg-[#f0e68c]"
-          style={{ touchAction: 'manipulation' }}
+          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center transition-colors touch-manipulation rounded-sm"
+          style={{ touchAction: 'manipulation', color: '#e6d88a' }}
           aria-label="Close window"
         >
           <span className="text-sm leading-none font-bold pointer-events-none">×</span>

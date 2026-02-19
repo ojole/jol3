@@ -7,6 +7,7 @@ import ResumeWindow from './windows/ResumeWindow'
 import ProjectsWindow from './windows/ProjectsWindow'
 import StickyNoteWindow from './windows/StickyNoteWindow'
 import IframeWindow from './windows/IframeWindow'
+import SnakeWindow from './windows/SnakeWindow'
 import { WindowType } from '@/lib/types'
 import { projectsFolderItems } from '@/data/desktopItems'
 
@@ -31,6 +32,8 @@ export default function WindowManager() {
         const faivItem = projectsFolderItems.find(item => item.id === 'faiv')
         return <IframeWindow url={faivItem?.url || 'https://faiv.ai'} title="faiv" />
       }
+      case 'snake':
+        return <SnakeWindow />
       default:
         return (
           <div className="p-6">

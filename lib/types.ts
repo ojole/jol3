@@ -16,6 +16,7 @@ export type WindowType =
   | 'fishbowl-hypothesis'
   | 'dark-planet-hypothesis'
   | 'lidar-emoji-mapping'
+  | 'snake'
 
 export type IconSide = 'left' | 'right'
 
