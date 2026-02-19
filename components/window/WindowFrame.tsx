@@ -68,22 +68,22 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   const windowContent = isStickyNote ? (
     <div
       ref={frameRef}
-      className="absolute pointer-events-auto rounded-sm overflow-hidden flex flex-col"
+      className="absolute pointer-events-auto flex flex-col"
       style={{
         ...style,
         zIndex: window.zIndex,
-        background: 'linear-gradient(135deg, #fff9c4 0%, #fff59d 50%, #fff176 100%)',
-        border: '2px solid #e6d88a',
-        boxShadow: '0 4px 16px rgba(120, 100, 40, 0.2), 0 1px 3px rgba(120, 100, 40, 0.15)',
+        background: '#fff9b1',
+        boxShadow: '2px 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)',
       }}
       onMouseDown={handleMouseDown}
       tabIndex={-1}
       role="dialog"
       aria-label={window.title}
     >
-      {/* Sticky Note Header - seamless, X matches border color */}
+      {/* Sticky Note Header */}
       <div
-        className="window-titlebar flex items-center justify-end px-1.5 pt-1 select-none cursor-move"
+        className="window-titlebar flex items-center justify-end px-1 select-none cursor-move"
+        style={{ background: '#f5e472', height: '28px', flexShrink: 0 }}
       >
         <button
           onClick={(e) => {
@@ -95,9 +95,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             e.preventDefault()
             closeWindow(window.id)
           }}
-          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center transition-colors touch-manipulation rounded-sm"
-          style={{ touchAction: 'manipulation', color: '#e6d88a' }}
+          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center touch-manipulation"
+          style={{ touchAction: 'manipulation', color: '#c9b84a', lineHeight: 1 }}
           aria-label="Close window"
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#8a7a2a' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#c9b84a' }}
         >
           <span className="text-sm leading-none font-bold pointer-events-none">×</span>
         </button>
@@ -107,6 +109,33 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       <div className="flex-1 overflow-auto">
         {children}
       </div>
+
+      {/* Folded corner */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          borderStyle: 'solid',
+          borderWidth: '0 0 20px 20px',
+          borderColor: 'transparent transparent #e8dfe0 transparent',
+          filter: 'drop-shadow(-1px -1px 1px rgba(0,0,0,0.06))',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          borderStyle: 'solid',
+          borderWidth: '0 0 18px 18px',
+          borderColor: 'transparent transparent #f0e68c transparent',
+        }}
+      />
     </div>
   ) : (
     <div

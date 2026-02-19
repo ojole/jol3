@@ -7,15 +7,15 @@ const CELL_SIZE = 16
 const TICK_MS = 120
 
 const COLORS = {
-  bg: '#0a1628',
-  grid: '#0f1d35',
-  snake: '#ff8c42',
-  snakeHead: '#ffad73',
-  food: '#ff6b1a',
-  foodGlow: 'rgba(255, 108, 26, 0.3)',
-  text: '#ff8c42',
-  textDim: '#3a4a6a',
-  border: '#1a2a4a',
+  bg: '#000000',
+  grid: '#0a0a0a',
+  snake: '#33ff00',
+  snakeHead: '#66ff33',
+  food: '#33ff00',
+  foodGlow: 'rgba(51, 255, 0, 0.15)',
+  text: '#33ff00',
+  textDim: '#1a6600',
+  border: '#1a3300',
 }
 
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'
@@ -257,11 +257,11 @@ export default function SnakeWindow() {
     >
       {/* Score bar */}
       <div
-        className="w-full flex items-center justify-between px-3 py-1.5 font-mono text-xs"
+        className="w-full flex items-center justify-between px-3 py-1.5 font-mono text-[10px] tracking-wider"
         style={{ color: COLORS.text, borderBottom: `1px solid ${COLORS.border}` }}
       >
-        <span>SCORE: {score}</span>
-        {highScore > 0 && <span style={{ color: COLORS.textDim }}>BEST: {highScore}</span>}
+        <span>SCORE {score}</span>
+        {highScore > 0 && <span style={{ color: COLORS.textDim }}>BEST {highScore}</span>}
       </div>
 
       {/* Game area */}
@@ -282,28 +282,36 @@ export default function SnakeWindow() {
         {gameState !== 'playing' && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center font-mono"
-            style={{ background: 'rgba(10, 22, 40, 0.85)' }}
+            style={{ background: 'rgba(0, 0, 0, 0.8)' }}
           >
             {gameState === 'dead' && (
-              <div className="text-center mb-4" style={{ color: COLORS.text }}>
-                <div className="text-lg font-bold mb-1">GAME OVER</div>
-                <div className="text-sm">Score: {score}</div>
+              <div className="text-center mb-5" style={{ color: COLORS.text }}>
+                <div className="text-sm tracking-[0.3em] mb-1.5">GAME OVER</div>
+                <div className="text-xs tracking-wider" style={{ color: COLORS.textDim }}>SCORE: {score}</div>
               </div>
             )}
             <button
               onClick={startGame}
-              className="px-6 py-2 font-mono font-bold text-sm transition-colors"
+              className="px-5 py-1.5 font-mono text-xs tracking-[0.2em] transition-colors"
               style={{
-                background: COLORS.snake,
-                color: COLORS.bg,
-                border: 'none',
+                background: 'transparent',
+                color: COLORS.text,
+                border: `1px solid ${COLORS.text}`,
                 cursor: 'pointer',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = COLORS.text
+                e.currentTarget.style.color = COLORS.bg
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = COLORS.text
+              }}
             >
-              {gameState === 'dead' ? 'PLAY AGAIN' : 'START'}
+              {gameState === 'dead' ? 'RETRY' : 'START'}
             </button>
-            <div className="mt-3 text-[10px]" style={{ color: COLORS.textDim }}>
-              Arrow keys or swipe to move
+            <div className="mt-3 text-[10px] tracking-wider" style={{ color: COLORS.textDim }}>
+              ARROWS / WASD / SWIPE
             </div>
           </div>
         )}
