@@ -12,7 +12,7 @@ export default function IconRail({ items, side }: IconRailProps) {
   return (
     <aside
       className={`
-        w-24 md:w-32
+        w-28 md:w-32
         bg-transparent
         px-4 py-6
         flex flex-col gap-6

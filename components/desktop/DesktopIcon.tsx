@@ -25,7 +25,7 @@ export default function DesktopIcon({ item }: DesktopIconProps) {
       className={`
         desktop-icon
         flex flex-col items-center gap-2
-        p-3 rounded
+        px-2 py-3 rounded
         cursor-pointer
         focus:outline-none
         ${isSelected ? 'selected' : ''}
@@ -53,7 +53,7 @@ export default function DesktopIcon({ item }: DesktopIconProps) {
       </div>
 
       {/* Label */}
-      <span className="text-xs text-center text-[var(--color-text-primary)] font-medium leading-tight max-w-[100px] whitespace-nowrap overflow-hidden text-ellipsis px-1" style={{ pointerEvents: 'none' }}>
+      <span className="text-xs text-center text-[var(--color-text-primary)] font-medium leading-tight whitespace-nowrap px-1" style={{ pointerEvents: 'none' }}>
         {item.label}
       </span>
     </button>
