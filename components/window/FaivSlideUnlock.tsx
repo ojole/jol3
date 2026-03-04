@@ -10,8 +10,74 @@ interface FaivSlideUnlockProps {
 const UNLOCK_THRESHOLD = 0.92
 const TOKEN_ENDPOINT =
   process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
+const CHAIN_ASPECT_RATIO = 463 / 744
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+type ChainNode = {
+  x: number
+  y: number
+}
+
+type ChainLink = {
+  x: number
+  y: number
+  rotation: number
+  zIndex: number
+}
+
+function solveHangingNodes(start: ChainNode, end: ChainNode, segmentLength: number, linkCount: number): ChainNode[] {
+  const nodes: ChainNode[] = Array.from({ length: linkCount + 1 }, (_, index) => {
+    const t = index / linkCount
+    const x = start.x + (end.x - start.x) * t
+    const y = start.y + (end.y - start.y) * t
+    return { x, y }
+  })
+
+  const midpointSag = segmentLength * linkCount * 0.12
+  for (let index = 1; index < nodes.length - 1; index += 1) {
+    const t = index / linkCount
+    nodes[index].y += Math.sin(Math.PI * t) * midpointSag
+  }
+
+  const gravity = segmentLength * 0.14
+  for (let iteration = 0; iteration < 28; iteration += 1) {
+    for (let index = 1; index < nodes.length - 1; index += 1) {
+      nodes[index].y += gravity
+    }
+
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (let index = 0; index < nodes.length - 1; index += 1) {
+        const current = nodes[index]
+        const next = nodes[index + 1]
+        const dx = next.x - current.x
+        const dy = next.y - current.y
+        const distance = Math.max(1e-6, Math.hypot(dx, dy))
+        const offset = (distance - segmentLength) / distance
+        const offsetX = dx * offset
+        const offsetY = dy * offset
+
+        if (index === 0) {
+          next.x -= offsetX
+          next.y -= offsetY
+        } else if (index + 1 === nodes.length - 1) {
+          current.x += offsetX
+          current.y += offsetY
+        } else {
+          current.x += offsetX * 0.5
+          current.y += offsetY * 0.5
+          next.x -= offsetX * 0.5
+          next.y -= offsetY * 0.5
+        }
+      }
+    }
+
+    nodes[0] = { ...start }
+    nodes[nodes.length - 1] = { ...end }
+  }
+
+  return nodes
+}
 
 export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   const railRef = useRef<HTMLDivElement>(null)
@@ -52,9 +118,9 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     const dragEndX = slotRight - ballSize * 0.58
     const travelDistance = Math.max(1, dragEndX - dragStartX)
     const dragX = dragStartX + progress * travelDistance
-    const jointY = centerY + ballSize * 0.32
-    const anchorJointX = anchorX + ballSize * 0.36
-    const dragJointX = dragX - ballSize * 0.36
+    const jointY = centerY + ballSize * 0.48
+    const anchorJointX = anchorX + ballSize * 0.03
+    const dragJointX = dragX - ballSize * 0.03
     return {
       ballSize,
       anchorX,
@@ -169,33 +235,47 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   }
 
   const chainLinks = useMemo(() => {
-    const span = Math.max(0, railGeometry.dragJointX - railGeometry.anchorJointX)
-    const baseSpacing = Math.max(12, railGeometry.ballSize * 0.42)
-    const count = clamp(Math.round(span / baseSpacing), 8, 22)
-    const sagAmplitude = railGeometry.ballSize * 0.2 + span * 0.11
-    const links = []
-    const pointAt = (t: number) => {
-      const x = railGeometry.anchorJointX + span * t
-      const y = railGeometry.jointY + Math.sin(Math.PI * t) * sagAmplitude
-      return { x, y }
-    }
-    for (let i = 0; i < count; i += 1) {
-      const t = (i + 1) / (count + 1)
-      const { x, y } = pointAt(t)
-      const prev = pointAt(Math.max(0, t - 0.03))
-      const next = pointAt(Math.min(1, t + 0.03))
+    const start = { x: railGeometry.anchorJointX, y: railGeometry.jointY }
+    const end = { x: railGeometry.dragJointX, y: railGeometry.jointY }
+    const distance = Math.max(2, Math.hypot(end.x - start.x, end.y - start.y))
+    const linkHeight = railGeometry.ballSize * 0.68
+    const segmentTarget = Math.max(6, linkHeight * 0.54)
+    const desiredLength = distance * (1.16 - progress * 0.06) + railGeometry.ballSize * 0.32
+    const linkCount = clamp(Math.round(desiredLength / segmentTarget), 3, 34)
+    const segmentLength = desiredLength / linkCount
+    const nodes = solveHangingNodes(start, end, segmentLength, linkCount)
+
+    const links: ChainLink[] = []
+    for (let index = 0; index < linkCount; index += 1) {
+      const current = nodes[index]
+      const next = nodes[index + 1]
+      const midX = (current.x + next.x) * 0.5
+      const midY = (current.y + next.y) * 0.5
+      const tangent = (Math.atan2(next.y - current.y, next.x - current.x) * 180) / Math.PI
+      const alternation = index % 2 === 0 ? 7 : -7
       links.push({
-        x,
-        y,
-        rotation: (Math.atan2(next.y - prev.y, next.x - prev.x) * 180) / Math.PI,
+        x: midX,
+        y: midY,
+        rotation: tangent + alternation,
+        zIndex: 6 + (index % 2),
       })
     }
-    return links
+    const startTangent = (Math.atan2(nodes[1].y - nodes[0].y, nodes[1].x - nodes[0].x) * 180) / Math.PI
+    const endTangent =
+      (Math.atan2(nodes[linkCount].y - nodes[linkCount - 1].y, nodes[linkCount].x - nodes[linkCount - 1].x) * 180) /
+      Math.PI
+    return {
+      links,
+      linkHeight,
+      startCap: { x: start.x, y: start.y, rotation: startTangent + 7 },
+      endCap: { x: end.x, y: end.y, rotation: endTangent - 7 },
+    }
   }, [
     railGeometry.anchorJointX,
     railGeometry.ballSize,
     railGeometry.dragJointX,
     railGeometry.jointY,
+    progress,
   ])
 
   return (
@@ -220,22 +300,53 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
             priority
           />
 
-          {chainLinks.map((link, index) => (
+          {chainLinks.links.map((link, index) => (
             <Image
               key={`link-${index}`}
               src="/icons/chain.png"
               alt=""
-              width={Math.max(16, Math.round(railGeometry.ballSize * 0.44))}
-              height={Math.max(16, Math.round(railGeometry.ballSize * 0.44))}
+              width={Math.max(14, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO))}
+              height={Math.max(18, Math.round(chainLinks.linkHeight))}
               className="absolute pointer-events-none"
               style={{
                 left: `${link.x}px`,
                 top: `${link.y}px`,
                 transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
                 opacity: 0.95,
+                zIndex: link.zIndex,
               }}
             />
           ))}
+
+          <Image
+            src="/icons/chain.png"
+            alt=""
+            width={Math.max(12, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO * 0.82))}
+            height={Math.max(14, Math.round(chainLinks.linkHeight * 0.82))}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${chainLinks.startCap.x}px`,
+              top: `${chainLinks.startCap.y}px`,
+              transform: `translate(-50%, -50%) rotate(${chainLinks.startCap.rotation}deg)`,
+              opacity: 0.98,
+              zIndex: 8,
+            }}
+          />
+
+          <Image
+            src="/icons/chain.png"
+            alt=""
+            width={Math.max(12, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO * 0.82))}
+            height={Math.max(14, Math.round(chainLinks.linkHeight * 0.82))}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${chainLinks.endCap.x}px`,
+              top: `${chainLinks.endCap.y}px`,
+              transform: `translate(-50%, -50%) rotate(${chainLinks.endCap.rotation}deg)`,
+              opacity: 0.98,
+              zIndex: 8,
+            }}
+          />
 
           <Image
             src="/icons/ball.png"
