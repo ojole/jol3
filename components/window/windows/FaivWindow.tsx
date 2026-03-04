@@ -7,6 +7,7 @@ import FaivSlideUnlock from '@/components/window/FaivSlideUnlock'
 const ASCII_FRAME_MS = 260
 const LOADER_TICK_MS = 80
 const LOADER_MIN_DURATION_MS = 1600
+const FAIV_NEON = '#57ff30'
 
 const asciiFAIVFrames = [
   [
@@ -108,29 +109,29 @@ export default function FaivWindow() {
   }
 
   return (
-    <div className="relative h-full w-full bg-[#d9c185]">
+    <div className="relative h-full w-full bg-[#020302]">
       {showLoader ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#d9c185]">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#020302]">
           <div className="w-full max-w-[640px] px-4 flex flex-col items-center gap-4 md:gap-5 pointer-events-none">
             <pre
               className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
               style={{
-                color: '#6f4f22',
+                color: FAIV_NEON,
                 fontSize: 'clamp(9px, 1.55vw, 13px)',
-                textShadow: '0 0 10px rgba(111,79,34,0.2)',
+                textShadow: '0 0 12px rgba(87,255,48,0.34)',
               }}
             >
               {asciiFAIVFrames[asciiFrameIndex].join('\n')}
             </pre>
 
             <div className="w-full max-w-[460px]">
-              <div className="h-2 w-full border border-[#9f7c3d] bg-[#efdeaf]">
+              <div className="h-2 w-full border border-[#2f7030] bg-[#061106]">
                 <div
-                  className="h-full bg-[#7e5a24] shadow-[0_0_10px_rgba(116,84,36,0.28)] transition-[width] duration-75 ease-linear"
+                  className="h-full bg-[#57ff30] shadow-[0_0_12px_rgba(87,255,48,0.5)] transition-[width] duration-75 ease-linear"
                   style={{ width: `${Math.max(0, Math.min(100, loaderProgress))}%` }}
                 />
               </div>
-              <p className="mt-2 text-center text-[10px] md:text-[11px] uppercase tracking-[0.14em] text-[#6f4f22]">
+              <p className="mt-2 text-center text-[10px] md:text-[11px] uppercase tracking-[0.14em] text-[#66ff42]">
                 Loading FAIV session... {Math.floor(loaderProgress)}%
               </p>
             </div>

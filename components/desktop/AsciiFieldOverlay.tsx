@@ -2,13 +2,39 @@
 
 import { useEffect, useRef } from 'react'
 
-const CELL_SIZE = 13
-const HEAD_RADIUS = 110
-const WAKE_RADIUS = 165
-const FIELD_RADIUS = 240
-const FLOW_TIME_SPEED = 0.00035
+const CELL_SIZE = 12
+const FLOW_TIME_SPEED = 0.00034
+const MIN_ACTIVE_SPEED = 0.008
+const INJECT_RADIUS_PX = 92
+const WAKE_RADIUS_PX = 132
+const TAU = Math.PI * 2
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+
+const sampleBilinear = (
+  field: Float32Array,
+  cols: number,
+  rows: number,
+  x: number,
+  y: number
+) => {
+  const sx = clamp(x, 0, cols - 1)
+  const sy = clamp(y, 0, rows - 1)
+  const x0 = Math.floor(sx)
+  const y0 = Math.floor(sy)
+  const x1 = Math.min(cols - 1, x0 + 1)
+  const y1 = Math.min(rows - 1, y0 + 1)
+  const tx = sx - x0
+  const ty = sy - y0
+  const i00 = y0 * cols + x0
+  const i10 = y0 * cols + x1
+  const i01 = y1 * cols + x0
+  const i11 = y1 * cols + x1
+  const top = field[i00] * (1 - tx) + field[i10] * tx
+  const bottom = field[i01] * (1 - tx) + field[i11] * tx
+  return top * (1 - ty) + bottom * ty
+}
 
 export default function AsciiFieldOverlay() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -46,8 +72,17 @@ export default function AsciiFieldOverlay() {
     let height = 0
     let cols = 0
     let rows = 0
+    let cellCount = 0
     let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
     let running = true
+    let lastTimestamp = 0
+
+    let energyA = new Float32Array(0)
+    let energyB = new Float32Array(0)
+    let velXA = new Float32Array(0)
+    let velXB = new Float32Array(0)
+    let velYA = new Float32Array(0)
+    let velYB = new Float32Array(0)
 
     const resize = () => {
       const rect = container.getBoundingClientRect()
@@ -55,7 +90,15 @@ export default function AsciiFieldOverlay() {
       height = Math.max(1, Math.floor(rect.height))
       cols = Math.ceil(width / CELL_SIZE)
       rows = Math.ceil(height / CELL_SIZE)
+      cellCount = cols * rows
       dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+
+      energyA = new Float32Array(cellCount)
+      energyB = new Float32Array(cellCount)
+      velXA = new Float32Array(cellCount)
+      velXB = new Float32Array(cellCount)
+      velYA = new Float32Array(cellCount)
+      velYB = new Float32Array(cellCount)
 
       if (smooth.x < -1000 || smooth.y < -1000) {
         smooth.x = width * 0.5
@@ -91,20 +134,12 @@ export default function AsciiFieldOverlay() {
 
       pointer.x = nextX
       pointer.y = nextY
-      pointer.speed = Math.min(1, Math.hypot(pointer.vx, pointer.vy) / 22)
+      pointer.speed = Math.min(1, Math.hypot(pointer.vx, pointer.vy) / 18)
       pointer.active = true
     }
 
-    const handleMove = (event: MouseEvent) => {
+    const handleMove = (event: PointerEvent) => {
       updatePointer(event.clientX, event.clientY)
-    }
-
-    const handleTouchMove = (event: TouchEvent) => {
-      const touch = event.touches[0]
-      if (!touch) {
-        return
-      }
-      updatePointer(touch.clientX, touch.clientY)
     }
 
     const handleLeave = () => {
@@ -112,97 +147,182 @@ export default function AsciiFieldOverlay() {
       pointer.speed = 0
     }
 
+    const injectPulse = (
+      centerX: number,
+      centerY: number,
+      radiusPx: number,
+      velocityX: number,
+      velocityY: number,
+      strength: number
+    ) => {
+      if (cols < 2 || rows < 2 || strength <= 0) {
+        return
+      }
+
+      const cx = centerX / CELL_SIZE
+      const cy = centerY / CELL_SIZE
+      const radius = Math.max(1.2, radiusPx / CELL_SIZE)
+      const radiusSq = radius * radius
+      const minX = Math.max(1, Math.floor(cx - radius))
+      const maxX = Math.min(cols - 2, Math.ceil(cx + radius))
+      const minY = Math.max(1, Math.floor(cy - radius))
+      const maxY = Math.min(rows - 2, Math.ceil(cy + radius))
+      const velocityMag = Math.hypot(velocityX, velocityY) || 1
+      const normX = velocityX / velocityMag
+      const normY = velocityY / velocityMag
+
+      for (let y = minY; y <= maxY; y += 1) {
+        for (let x = minX; x <= maxX; x += 1) {
+          const dx = x - cx
+          const dy = y - cy
+          const distSq = dx * dx + dy * dy
+          if (distSq > radiusSq) {
+            continue
+          }
+          const dist = Math.sqrt(distSq)
+          const falloff = (1 - dist / radius) ** 1.5
+          const index = y * cols + x
+          energyA[index] = Math.min(1.85, energyA[index] + falloff * strength * 0.92)
+          velXA[index] += normX * falloff * strength * 0.84
+          velYA[index] += normY * falloff * strength * 0.84
+        }
+      }
+    }
+
+    const stepField = (time: number, dt: number) => {
+      if (cellCount === 0) {
+        return
+      }
+
+      for (let y = 1; y < rows - 1; y += 1) {
+        for (let x = 1; x < cols - 1; x += 1) {
+          const index = y * cols + x
+          const nx = x / cols
+          const ny = y / rows
+
+          const phaseA = Math.sin((nx * 5.8 + ny * 2.5 + time * 0.00042) * TAU)
+          const phaseB = Math.cos((ny * 4.9 - nx * 2.9 - time * 0.00033) * TAU)
+          const globalX = (phaseA + phaseB) * 0.18
+          const globalY =
+            (Math.sin((ny * 6.2 + time * 0.00028) * TAU) -
+              Math.cos((nx * 5.1 - time * 0.00025) * TAU)) *
+            0.13
+
+          const vx = velXA[index]
+          const vy = velYA[index]
+          const advectX = x - (vx * 0.72 + globalX) * dt
+          const advectY = y - (vy * 0.72 + globalY) * dt
+
+          const advectedEnergy = sampleBilinear(energyA, cols, rows, advectX, advectY)
+          const left = index - 1
+          const right = index + 1
+          const up = index - cols
+          const down = index + cols
+
+          const lapEnergy =
+            (energyA[left] + energyA[right] + energyA[up] + energyA[down]) * 0.25 - energyA[index]
+          const nextEnergy = (advectedEnergy + lapEnergy * 0.18 * dt) * 0.974
+          energyB[index] = clamp(nextEnergy, 0, 1.85)
+
+          const advectedVX = sampleBilinear(velXA, cols, rows, advectX, advectY)
+          const advectedVY = sampleBilinear(velYA, cols, rows, advectX, advectY)
+          const lapVX = (velXA[left] + velXA[right] + velXA[up] + velXA[down]) * 0.25 - vx
+          const lapVY = (velYA[left] + velYA[right] + velYA[up] + velYA[down]) * 0.25 - vy
+
+          velXB[index] = (advectedVX + lapVX * 0.24 * dt + globalX * 0.03) * 0.912
+          velYB[index] = (advectedVY + lapVY * 0.24 * dt + globalY * 0.03) * 0.912
+        }
+      }
+
+      for (let x = 0; x < cols; x += 1) {
+        const top = x
+        const bottom = (rows - 1) * cols + x
+        energyB[top] = energyB[top + cols] * 0.82
+        energyB[bottom] = energyB[bottom - cols] * 0.82
+        velXB[top] = velXB[top + cols] * 0.65
+        velXB[bottom] = velXB[bottom - cols] * 0.65
+        velYB[top] = velYB[top + cols] * 0.65
+        velYB[bottom] = velYB[bottom - cols] * 0.65
+      }
+      for (let y = 0; y < rows; y += 1) {
+        const left = y * cols
+        const right = left + (cols - 1)
+        energyB[left] = energyB[left + 1] * 0.82
+        energyB[right] = energyB[right - 1] * 0.82
+        velXB[left] = velXB[left + 1] * 0.65
+        velXB[right] = velXB[right - 1] * 0.65
+        velYB[left] = velYB[left + 1] * 0.65
+        velYB[right] = velYB[right - 1] * 0.65
+      }
+
+      ;[energyA, energyB] = [energyB, energyA]
+      ;[velXA, velXB] = [velXB, velXA]
+      ;[velYA, velYB] = [velYB, velYA]
+    }
+
     const render = (time: number) => {
       if (!running) {
         return
       }
 
+      if (!lastTimestamp) {
+        lastTimestamp = time
+      }
+      const deltaMs = Math.min(40, Math.max(8, time - lastTimestamp))
+      lastTimestamp = time
+      const dt = deltaMs / 16.67
+
       smooth.x += (pointer.x - smooth.x) * 0.14
       smooth.y += (pointer.y - smooth.y) * 0.14
-      pointer.vx *= 0.91
-      pointer.vy *= 0.91
-      pointer.speed *= 0.96
+      pointer.vx *= 0.9
+      pointer.vy *= 0.9
+      pointer.speed *= 0.95
+
+      if (pointer.active && pointer.speed > MIN_ACTIVE_SPEED) {
+        const energyBoost = 0.26 + pointer.speed * 1.15
+        injectPulse(
+          smooth.x,
+          smooth.y,
+          INJECT_RADIUS_PX,
+          pointer.vx,
+          pointer.vy,
+          energyBoost
+        )
+        injectPulse(
+          smooth.x - pointer.vx * 5.8,
+          smooth.y - pointer.vy * 5.8,
+          WAKE_RADIUS_PX,
+          pointer.vx,
+          pointer.vy,
+          energyBoost * 0.46
+        )
+      }
+
+      stepField(time, dt)
 
       context.clearRect(0, 0, width, height)
-
-      const trailX = smooth.x - pointer.vx * 5.7
-      const trailY = smooth.y - pointer.vy * 5.7
-      const motionBoost = 0.1 + pointer.speed * 1.25
-      const t = time * FLOW_TIME_SPEED
-      const motionActive = pointer.active && pointer.speed > 0.015
 
       for (let row = 0; row < rows; row += 1) {
         const y = row * CELL_SIZE + CELL_SIZE * 0.52
         for (let col = 0; col < cols; col += 1) {
           const x = col * CELL_SIZE + CELL_SIZE * 0.5
-
-          const nx = x / width
-          const ny = y / height
-
-          const warpX =
-            nx +
-            Math.sin((ny * 5.2 + t * 1.9) * Math.PI * 2) * 0.115 +
-            Math.cos((ny * 2.6 - t * 1.2) * Math.PI * 2) * 0.052
-          const warpY =
-            ny +
-            Math.cos((nx * 4.4 - t * 1.35) * Math.PI * 2) * 0.102 +
-            Math.sin((nx * 2.1 + t * 0.86) * Math.PI * 2) * 0.044
-
-          const flowA =
-            Math.sin((warpX * 7.4 + t * 1.5) * Math.PI * 2 + Math.cos((warpY * 4.8 - t * 1.1) * Math.PI * 2) * 0.62)
-          const flowB =
-            Math.cos((warpY * 8.2 - t * 1.35) * Math.PI * 2 + Math.sin((warpX * 4.1 + t * 0.7) * Math.PI * 2) * 0.48)
-          const flowC = Math.sin(((warpX + warpY) * 5.2 - t * 1.75) * Math.PI * 2)
-          const stream = flowA * 0.5 + flowB * 0.34 + flowC * 0.16
-
-          let headInfluence = 0
-          let wakeInfluence = 0
-          let rippleInfluence = 0
-          let fieldInfluence = 0
-          if (motionActive) {
-            const headDistance = Math.hypot(x - smooth.x, y - smooth.y)
-            const tailDistance = Math.hypot(x - trailX, y - trailY)
-            headInfluence = clamp01(1 - headDistance / HEAD_RADIUS) * motionBoost
-            wakeInfluence = clamp01(1 - tailDistance / WAKE_RADIUS) * (0.68 + pointer.speed * 0.55)
-            fieldInfluence =
-              clamp01(1 - headDistance / FIELD_RADIUS) * (0.35 + pointer.speed * 0.65)
-            rippleInfluence =
-              Math.sin(headDistance * 0.085 - time * 0.014) *
-              clamp01(1 - headDistance / 260) *
-              (0.34 + pointer.speed * 0.6)
-          }
-
-          const directedMotion =
-            ((x - smooth.x) * pointer.vx + (y - smooth.y) * pointer.vy) /
-            (Math.max(18, Math.hypot(x - smooth.x, y - smooth.y)) * 22)
-
-          const streamStrength = motionActive ? 0.08 + fieldInfluence * 0.76 : 0.03
-          const energy =
-            stream * streamStrength +
-            headInfluence * 1.02 +
-            wakeInfluence * 0.55 +
-            rippleInfluence +
-            directedMotion * 0.58
+          const index = row * cols + col
+          const pulse = energyA[index]
+          const velocityMag = Math.hypot(velXA[index], velYA[index])
+          const shimmer =
+            Math.sin((col * 0.23 + row * 0.17) + time * FLOW_TIME_SPEED * 10.8) * 0.5 + 0.5
+          const ambient = 0.18 + shimmer * 0.18
+          const signal = ambient + pulse * 0.96 + velocityMag * 0.26
 
           let glyph = '_'
-          if (energy > 0.68) {
+          if (signal > 0.84) {
             glyph = 'e'
-          } else if (energy > 0.24) {
+          } else if (signal > 0.44) {
             glyph = '>'
           }
 
-          const idleShimmer = clamp01(Math.sin((col * 0.24) + (row * 0.19) + t * 7.2) * 0.5 + 0.5)
-          const baseAlpha = motionActive
-            ? 0.016 + fieldInfluence * 0.19 + idleShimmer * 0.03
-            : 0.007 + idleShimmer * 0.014
-          const alpha = clamp01(
-            baseAlpha +
-              headInfluence * 0.39 +
-              wakeInfluence * 0.26 +
-              Math.abs(rippleInfluence) * 0.16
-          )
-          const alphaThreshold = motionActive ? 0.055 : 0.035
-          if (alpha < alphaThreshold) {
+          const alpha = clamp01(0.038 + ambient * 0.3 + pulse * 0.5 + velocityMag * 0.13)
+          if (alpha < 0.052) {
             continue
           }
 
@@ -220,8 +340,7 @@ export default function AsciiFieldOverlay() {
     const observer = new ResizeObserver(() => resize())
     observer.observe(container)
     window.addEventListener('resize', resize)
-    window.addEventListener('mousemove', handleMove, { passive: true })
-    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('pointermove', handleMove, { passive: true })
     window.addEventListener('mouseleave', handleLeave, { passive: true })
     window.addEventListener('blur', handleLeave, { passive: true })
 
@@ -229,8 +348,7 @@ export default function AsciiFieldOverlay() {
       running = false
       observer.disconnect()
       window.removeEventListener('resize', resize)
-      window.removeEventListener('mousemove', handleMove)
-      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('pointermove', handleMove)
       window.removeEventListener('mouseleave', handleLeave)
       window.removeEventListener('blur', handleLeave)
       if (rafRef.current !== null) {
@@ -248,7 +366,7 @@ export default function AsciiFieldOverlay() {
         className="pointer-events-none absolute inset-0"
         style={{
           mixBlendMode: 'difference',
-          opacity: 0.58,
+          opacity: 0.78,
         }}
       />
     </div>

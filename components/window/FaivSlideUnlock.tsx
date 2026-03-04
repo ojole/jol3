@@ -19,6 +19,10 @@ const CHAIN_SLACK_START = 1.22
 const CHAIN_SLACK_END = 1.02
 const CHAIN_INTERLOCK_ANGLE_DEG = 14
 const ASCII_FRAME_MS = 280
+const FAIV_NEON = '#57ff30'
+const LOCK_TINT_FILTER = 'hue-rotate(82deg) saturate(2.6) contrast(1.2) brightness(0.9)'
+const LOCK_GLOW_FILTER = 'drop-shadow(0 0 10px rgba(87,255,48,0.22)) drop-shadow(0 2px 5px rgba(0,0,0,0.58))'
+const LOCK_FILTER = `${LOCK_TINT_FILTER} ${LOCK_GLOW_FILTER}`
 const asciiFAIVFrames = [
   [
     '███████╗ █████╗ ██╗██╗   ██╗',
@@ -325,15 +329,15 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   ])
 
   return (
-    <div className="h-full w-full bg-[#d9c185] text-[#6d5224] px-3 py-4 md:px-5 md:py-5 font-mono">
+    <div className="h-full w-full bg-[#020302] text-[#61ff39] px-3 py-4 md:px-5 md:py-5 font-mono">
       <div className="h-full w-full flex flex-col items-center justify-center gap-2 sm:gap-3 md:gap-4">
         <div className="w-full flex justify-center items-center pointer-events-none">
           <pre
             className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
             style={{
-              color: '#6f4f22',
+              color: FAIV_NEON,
               fontSize: 'clamp(8px, 1.45vw, 12px)',
-              textShadow: '0 0 10px rgba(111,79,34,0.2)',
+              textShadow: '0 0 11px rgba(87,255,48,0.35)',
             }}
           >
             {asciiFAIVFrames[asciiFrameIndex].join('\n')}
@@ -352,6 +356,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
               fill
               sizes="(max-width: 768px) 95vw, 700px"
               className="object-contain pointer-events-none"
+              style={{ filter: LOCK_FILTER }}
               priority
             />
 
@@ -370,6 +375,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
                   zIndex: link.zIndex,
                   opacity: 0.98,
                   imageRendering: 'pixelated',
+                  filter: LOCK_FILTER,
                 }}
               />
             ))}
@@ -384,7 +390,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
                 left: `${railGeometry.anchorX}px`,
                 top: `${railGeometry.centerY}px`,
                 transform: 'translate(-50%, -50%)',
-                filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
+                filter: LOCK_FILTER,
               }}
             />
 
@@ -405,16 +411,23 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
                 height: `${railGeometry.ballSize}px`,
                 transform: 'translate(-50%, -50%)',
                 cursor: dragging ? 'grabbing' : 'grab',
-                filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
+                filter: LOCK_FILTER,
               }}
             >
-              <Image src="/icons/ball.png" alt="" fill sizes="56px" className="pointer-events-none object-contain" />
+              <Image
+                src="/icons/ball.png"
+                alt=""
+                fill
+                sizes="56px"
+                className="pointer-events-none object-contain"
+                style={{ filter: LOCK_TINT_FILTER }}
+              />
             </button>
           </div>
         </div>
 
         {error ? (
-          <div className="w-full max-w-[700px] text-[11px] text-[#7a2f38] border border-[#a77d85] bg-[#f2dee1] px-2 py-1">
+          <div className="w-full max-w-[700px] text-[11px] text-[#ff8f98] border border-[#523235] bg-[#160b0d] px-2 py-1">
             {error}
           </div>
         ) : null}
