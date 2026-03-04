@@ -15,6 +15,13 @@ interface WindowFrameProps {
 const FAIV_TOKEN_ENDPOINT =
   process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
 const projectWindowTypeSet = new Set(projectsFolderItems.map((item) => item.windowType))
+const titleBarControlSizeClass = 'w-7 h-7 md:w-5 md:h-5'
+const titleBarControlBaseClass =
+  `${titleBarControlSizeClass} rounded-sm transition-colors flex items-center justify-center touch-manipulation`
+const titleBarControlNeutralClass =
+  `${titleBarControlBaseClass} bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] text-white`
+const titleBarControlCloseClass =
+  `${titleBarControlBaseClass} bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] text-white`
 
 export default function WindowFrame({ window, children }: WindowFrameProps) {
   const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition } = useWindowStore()
@@ -149,13 +156,13 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             e.preventDefault()
             closeWindow(window.id)
           }}
-          className="w-7 h-7 md:w-5 md:h-5 flex items-center justify-center touch-manipulation"
+          className={`${titleBarControlSizeClass} flex items-center justify-center touch-manipulation`}
           style={{ touchAction: 'manipulation', color: '#c9b84a', lineHeight: 1 }}
           aria-label="Close window"
           onMouseEnter={(e) => { e.currentTarget.style.color = '#8a7a2a' }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#c9b84a' }}
         >
-          <span className="text-sm leading-none font-bold pointer-events-none">×</span>
+          <span className="text-xs md:text-[10px] leading-none font-bold pointer-events-none">×</span>
         </button>
       </div>
 
@@ -263,12 +270,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
                 e.preventDefault()
                 void openProjectAppInNewTab()
               }}
-              className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center text-white touch-manipulation"
+              className={titleBarControlNeutralClass}
               style={{ touchAction: 'manipulation' }}
-              aria-label="Open FAIV in new tab"
-              title="Open FAIV in new tab"
+              aria-label="Open app in new tab"
+              title="Open app in new tab"
             >
-              <span className="text-sm md:text-xs leading-none pointer-events-none">↗</span>
+              <span className="text-xs md:text-[10px] leading-none pointer-events-none">↗</span>
             </button>
           ) : null}
 
@@ -283,11 +290,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
               e.preventDefault()
               minimizeWindow(window.id)
             }}
-            className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
+            className={`${titleBarControlNeutralClass} font-bold`}
             style={{ touchAction: 'manipulation' }}
             aria-label="Minimize window"
           >
-            <span className="text-base leading-none mb-1 pointer-events-none">−</span>
+            <span className="text-sm md:text-xs leading-none mb-[1px] pointer-events-none">−</span>
           </button>
 
           {/* Maximize Button */}
@@ -301,11 +308,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
               e.preventDefault()
               toggleMaximize(window.id)
             }}
-            className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center font-bold text-white touch-manipulation"
+            className={`${titleBarControlNeutralClass} font-bold`}
             style={{ touchAction: 'manipulation' }}
             aria-label={window.isMaximized ? 'Restore window' : 'Maximize window'}
           >
-            <span className="text-base leading-none pointer-events-none">□</span>
+            <span className="text-sm md:text-xs leading-none pointer-events-none">□</span>
           </button>
 
           {/* Close Button */}
@@ -319,11 +326,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
               e.preventDefault()
               closeWindow(window.id)
             }}
-            className="w-9 h-9 md:w-6 md:h-6 bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] rounded-sm transition-colors flex items-center justify-center text-white font-bold touch-manipulation"
+            className={`${titleBarControlCloseClass} font-bold`}
             style={{ touchAction: 'manipulation' }}
             aria-label="Close window"
           >
-            <span className="text-base leading-none pointer-events-none">×</span>
+            <span className="text-sm md:text-xs leading-none pointer-events-none">×</span>
           </button>
         </div>
       </div>

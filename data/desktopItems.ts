@@ -41,7 +41,7 @@ export const desktopItems: DesktopItem[] = [
   },
   {
     id: 'contact',
-    label: 'contact.notes',
+    label: 'contact',
     type: 'txt',
     side: 'left',
     windowType: 'contact',

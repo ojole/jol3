@@ -49,7 +49,7 @@ export default function TopBar() {
               style={{ transform: 'rotate(45deg)' }}
             />
             <p className="text-[11px] font-mono text-[var(--color-text-primary)] leading-relaxed">
-              Battery low, you should contact jol3 soon. See to the contact.notes file below.
+              Battery low, you should contact jol3 soon. See to the contact file below.
             </p>
             <button
               onClick={() => setShowBubble(false)}
