@@ -18,6 +18,33 @@ const CHAIN_JOINT_RATIO = 0.68
 const CHAIN_SLACK_START = 1.22
 const CHAIN_SLACK_END = 1.02
 const CHAIN_INTERLOCK_ANGLE_DEG = 14
+const ASCII_FRAME_MS = 140
+const asciiFAIVFrames = [
+  [
+    '███████╗ █████╗ ██╗██╗   ██╗',
+    '██╔════╝██╔══██╗██║██║   ██║',
+    '█████╗  ███████║██║██║   ██║',
+    '██╔══╝  ██╔══██║██║╚██╗ ██╔╝',
+    '██║     ██║  ██║██║ ╚████╔╝ ',
+    '╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ',
+  ],
+  [
+    ' ██████╗ █████╗ ██╗██╗   ██╗',
+    '██╔════╝██╔══██╗██║██║   ██║',
+    '█████╗  ███████║██║██║   ██║',
+    '██╔══╝  ██╔══██║██║╚██╗ ██╔╝',
+    '██║     ██║  ██║██║ ╚████╔╝ ',
+    '╚═╝     ██╔═╝  ╚═╝╚═╝  ╚═══╝ ',
+  ],
+  [
+    '  ██████╗ █████╗ ██╗██╗   ██╗',
+    ' ██╔════╝██╔══██╗██║██║   ██║',
+    ' █████╗  ███████║██║██║   ██║',
+    ' ██╔══╝  ██╔══██║██║╚██╗ ██╔╝',
+    ' ██║     ██║  ██║██║ ╚████╔╝ ',
+    ' ╚═╝     ██╔═╝  ╚═╝╚═╝  ╚═══╝ ',
+  ],
+]
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -98,6 +125,14 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   const [dragging, setDragging] = useState(false)
   const [unlocking, setUnlocking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [asciiFrameIndex, setAsciiFrameIndex] = useState(0)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setAsciiFrameIndex((current) => (current + 1) % asciiFAIVFrames.length)
+    }, ASCII_FRAME_MS)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const node = railRef.current
@@ -291,12 +326,19 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
 
   return (
     <div className="h-full w-full bg-[#090909] text-[#d7ffe1] p-4 md:p-5 font-mono flex flex-col">
-      <div className="border border-[#3a3a3a] bg-[#121212] p-3 md:p-4">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-[#9cebb5]">FAIV secure embed</p>
-        <p className="mt-1 text-xs text-[#bfe7c8]">Slide to unlock FAIV inside this window.</p>
+      <div className="w-full flex justify-center items-center pointer-events-none">
+        <pre
+          className="m-0 text-center leading-[1.04] tracking-[0.01em] text-[11px] md:text-[12px]"
+          style={{
+            color: '#00ff3f',
+            textShadow: '0 0 8px rgba(0,255,63,0.34), 0 0 16px rgba(0,255,63,0.16)',
+          }}
+        >
+          {asciiFAIVFrames[asciiFrameIndex].join('\n')}
+        </pre>
       </div>
 
-      <div className="mt-4 flex-1 border border-[#2a2a2a] bg-[#0b0b0b] p-3 md:p-5 flex flex-col justify-center">
+      <div className="mt-3 flex-1 border border-[#2a2a2a] bg-[#0b0b0b] p-3 md:p-5 flex flex-col justify-center">
         <div
           ref={railRef}
           className="relative w-full max-w-[700px] mx-auto select-none"
