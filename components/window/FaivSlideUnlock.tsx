@@ -26,9 +26,6 @@ type ChainLink = {
   zIndex: number
   width: number
   height: number
-  scaleX: number
-  opacity: number
-  filter: string
 }
 
 function solveHangingNodes(start: ChainNode, end: ChainNode, segmentLength: number, linkCount: number): ChainNode[] {
@@ -247,13 +244,13 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     const maxDistance = Math.max(10, railGeometry.dragEndJointX - railGeometry.anchorJointX)
     const distance = Math.max(2, Math.hypot(end.x - start.x, end.y - start.y))
     const linkHeight = railGeometry.ballSize * 0.68
-    const nominalPitch = Math.max(8, linkHeight * 0.35)
+    const nominalPitch = Math.max(8, linkHeight * 0.42)
     const linkCount = clamp(Math.round(maxDistance / nominalPitch), 16, 36)
-    const slackFactor = 1.16 - progress * 0.14
+    const slackFactor = 1.14 - progress * 0.12
     const segmentLength = clamp(
       (distance * slackFactor) / linkCount,
-      linkHeight * 0.28,
-      linkHeight * 0.54
+      linkHeight * 0.33,
+      linkHeight * 0.48
     )
     const nodes = solveHangingNodes(start, end, segmentLength, linkCount)
 
@@ -268,33 +265,21 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       const isFront = index % 2 === 0
       const normalX = -Math.sin(tangentRadians)
       const normalY = Math.cos(tangentRadians)
-      const depthOffset = (isFront ? -1 : 1) * linkHeight * 0.06
+      const depthOffset = (isFront ? -1 : 1) * linkHeight * 0.04
       const x = midX + normalX * depthOffset
       const y = midY + normalY * depthOffset
-      const localRoll = isFront ? -3 : 86
-      const width = Math.max(14, Math.round(linkHeight * CHAIN_ASPECT_RATIO * (isFront ? 1 : 0.8)))
+      const localRoll = isFront ? -2 : 88
+      const width = Math.max(14, Math.round(linkHeight * CHAIN_ASPECT_RATIO))
       links.push({
         x,
         y,
         rotation: tangent + localRoll,
-        zIndex: isFront ? 10 : 8,
+        zIndex: isFront ? 10 : 9,
         width,
         height: Math.max(18, Math.round(linkHeight)),
-        scaleX: isFront ? 1 : 0.78,
-        opacity: isFront ? 0.97 : 0.93,
-        filter: isFront ? 'drop-shadow(0 0 1px rgba(0,0,0,0.2))' : 'brightness(0.92)',
       })
     }
-    const startTangent = (Math.atan2(nodes[1].y - nodes[0].y, nodes[1].x - nodes[0].x) * 180) / Math.PI
-    const endTangent =
-      (Math.atan2(nodes[linkCount].y - nodes[linkCount - 1].y, nodes[linkCount].x - nodes[linkCount - 1].x) * 180) /
-      Math.PI
-    return {
-      links,
-      linkHeight,
-      startCap: { x: start.x, y: start.y, rotation: startTangent + 7 },
-      endCap: { x: end.x, y: end.y, rotation: endTangent - 7 },
-    }
+    return links
   }, [
     railGeometry.anchorJointX,
     railGeometry.ballSize,
@@ -326,7 +311,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
             priority
           />
 
-          {chainLinks.links.map((link, index) => (
+          {chainLinks.map((link, index) => (
             <Image
               key={`link-${index}`}
               src="/icons/chain.png"
@@ -337,43 +322,12 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
               style={{
                 left: `${link.x}px`,
                 top: `${link.y}px`,
-                transform: `translate(-50%, -50%) rotate(${link.rotation}deg) scaleX(${link.scaleX})`,
-                opacity: link.opacity,
+                transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
                 zIndex: link.zIndex,
-                filter: link.filter,
+                opacity: 0.98,
               }}
             />
           ))}
-
-          <Image
-            src="/icons/chain.png"
-            alt=""
-            width={Math.max(12, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO * 0.82))}
-            height={Math.max(14, Math.round(chainLinks.linkHeight * 0.82))}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${chainLinks.startCap.x}px`,
-              top: `${chainLinks.startCap.y}px`,
-              transform: `translate(-50%, -50%) rotate(${chainLinks.startCap.rotation}deg)`,
-              opacity: 0.98,
-              zIndex: 8,
-            }}
-          />
-
-          <Image
-            src="/icons/chain.png"
-            alt=""
-            width={Math.max(12, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO * 0.82))}
-            height={Math.max(14, Math.round(chainLinks.linkHeight * 0.82))}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${chainLinks.endCap.x}px`,
-              top: `${chainLinks.endCap.y}px`,
-              transform: `translate(-50%, -50%) rotate(${chainLinks.endCap.rotation}deg)`,
-              opacity: 0.98,
-              zIndex: 8,
-            }}
-          />
 
           <Image
             src="/icons/ball.png"
