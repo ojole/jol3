@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Draggable from 'react-draggable'
 import { WindowState } from '@/lib/types'
@@ -24,9 +24,17 @@ const titleBarControlCloseClass =
   `${titleBarControlBaseClass} bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] text-white`
 
 export default function WindowFrame({ window, children }: WindowFrameProps) {
-  const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition } = useWindowStore()
+  const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition, updateWindowSize } = useWindowStore()
   const frameRef = useRef<HTMLDivElement>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
+  const stickyResizeRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    startWidth: number
+    startHeight: number
+  } | null>(null)
+  const [stickyResizing, setStickyResizing] = useState(false)
 
   // Focus on mount
   useEffect(() => {
@@ -126,6 +134,50 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     globalThis.window?.open(projectItem.url, '_blank', 'noopener,noreferrer')
   }
 
+  const beginStickyResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (window.isMaximized) {
+      return
+    }
+    event.stopPropagation()
+    event.preventDefault()
+    stickyResizeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: window.width,
+      startHeight: window.height,
+    }
+    setStickyResizing(true)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const moveStickyResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = stickyResizeRef.current
+    if (!state || state.pointerId !== event.pointerId) {
+      return
+    }
+    event.stopPropagation()
+    const deltaX = event.clientX - state.startX
+    const deltaY = event.clientY - state.startY
+    const nextWidth = Math.round(Math.max(220, Math.min(560, state.startWidth + deltaX)))
+    const nextHeight = Math.round(Math.max(170, Math.min(480, state.startHeight + deltaY)))
+    updateWindowSize(window.id, nextWidth, nextHeight)
+  }
+
+  const endStickyResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = stickyResizeRef.current
+    if (!state || state.pointerId !== event.pointerId) {
+      return
+    }
+    stickyResizeRef.current = null
+    setStickyResizing(false)
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      // no-op
+    }
+  }
+
   const windowContent = isStickyNote ? (
     <div
       ref={frameRef}
@@ -133,8 +185,9 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       style={{
         ...style,
         zIndex: window.zIndex,
-        background: '#fff9b1',
-        boxShadow: '2px 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)',
+        background: '#f7ef9a',
+        border: '1px solid #d4c56a',
+        boxShadow: window.isMaximized ? 'none' : '1px 1px 0 rgba(102, 88, 30, 0.25)',
       }}
       onMouseDown={handleMouseDown}
       tabIndex={-1}
@@ -144,7 +197,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       {/* Sticky Note Header */}
       <div
         className="window-titlebar flex items-center justify-end px-1 select-none cursor-move"
-        style={{ background: '#f5e472', height: '28px', flexShrink: 0 }}
+        style={{
+          background: '#efe37f',
+          minHeight: '30px',
+          borderBottom: '1px solid #d4c56a',
+          flexShrink: 0,
+        }}
       >
         <button
           onClick={(e) => {
@@ -167,7 +225,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       </div>
 
       {/* Sticky Note Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-[#f7ef9a]">
         {children}
       </div>
 
@@ -180,9 +238,10 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
           width: 0,
           height: 0,
           borderStyle: 'solid',
-          borderWidth: '0 0 20px 20px',
-          borderColor: 'transparent transparent #e8dfe0 transparent',
+          borderWidth: '0 0 16px 16px',
+          borderColor: 'transparent transparent #e1d47a transparent',
           filter: 'drop-shadow(-1px -1px 1px rgba(0,0,0,0.06))',
+          pointerEvents: 'none',
         }}
       />
       <div
@@ -193,10 +252,34 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
           width: 0,
           height: 0,
           borderStyle: 'solid',
-          borderWidth: '0 0 18px 18px',
-          borderColor: 'transparent transparent #f0e68c transparent',
+          borderWidth: '0 0 14px 14px',
+          borderColor: 'transparent transparent #f9f2b0 transparent',
+          pointerEvents: 'none',
         }}
       />
+
+      {!window.isMaximized ? (
+        <div
+          className="hidden md:flex absolute right-0 bottom-0 h-5 w-5 items-end justify-end cursor-se-resize"
+          onPointerDown={beginStickyResize}
+          onPointerMove={moveStickyResize}
+          onPointerUp={endStickyResize}
+          onPointerCancel={endStickyResize}
+          style={{ touchAction: 'none' }}
+          aria-label="Resize contact note"
+          role="button"
+          tabIndex={-1}
+        >
+          <div
+            className="h-[10px] w-[10px]"
+            style={{
+              background:
+                'linear-gradient(135deg, transparent 0 30%, rgba(133,120,54,0.2) 30% 36%, transparent 36% 56%, rgba(133,120,54,0.24) 56% 62%, transparent 62% 100%)',
+              opacity: stickyResizing ? 1 : 0.72,
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   ) : (
     <div

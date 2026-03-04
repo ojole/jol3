@@ -10,6 +10,7 @@ interface WindowStore {
   minimizeWindow: (id: string) => void
   toggleMaximize: (id: string) => void
   updateWindowPosition: (id: string, x: number, y: number) => void
+  updateWindowSize: (id: string, width: number, height: number) => void
 }
 
 let windowCounter = 0
@@ -43,8 +44,8 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     // Sticky note gets smaller dimensions
     const isStickyNote = windowType === 'contact'
 
-    if (isMobile && !isStickyNote) {
-      // On mobile, maximize windows by default (except sticky notes)
+    if (isMobile) {
+      // On mobile, maximize all windows by default.
       isMaximized = true
       width = viewportWidth
       height = viewportHeight
@@ -132,6 +133,14 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     set(state => ({
       windows: state.windows.map(w =>
         w.id === id ? { ...w, x, y } : w
+      ),
+    }))
+  },
+
+  updateWindowSize: (id: string, width: number, height: number) => {
+    set(state => ({
+      windows: state.windows.map(w =>
+        w.id === id ? { ...w, width, height } : w
       ),
     }))
   },

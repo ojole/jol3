@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import TopBar from './TopBar'
 import IconRail from './IconRail'
+import AsciiFieldOverlay from './AsciiFieldOverlay'
 import Taskbar from '../ui/Taskbar'
 import WindowManager from '@/components/window/WindowManager'
 import DynamicFavicon from '@/components/DynamicFavicon'
@@ -48,11 +49,13 @@ export default function DesktopShell() {
             paddingBottom: 'calc(var(--taskbar-height-mobile) + var(--safe-bottom))',
           }}
         >
+          <AsciiFieldOverlay />
+
           {/* Left Icon Rail (Desktop Items) */}
           <IconRail items={leftRailItems} side="left" />
 
           {/* Center Workspace (Windows) */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative z-10">
             <WindowManager />
           </div>
         </div>

@@ -108,29 +108,29 @@ export default function FaivWindow() {
   }
 
   return (
-    <div className="relative h-full w-full bg-[#050505]">
+    <div className="relative h-full w-full bg-gradient-to-br from-[#d8d0d2] via-[#cbc3c5] to-[#beb6b8]">
       {showLoader ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#050505]">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-gradient-to-br from-[#d2cace] via-[#c7c0c4] to-[#b9b1b4]">
           <div className="w-full max-w-[640px] px-4 flex flex-col items-center gap-4 md:gap-5 pointer-events-none">
             <pre
               className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
               style={{
-                color: '#00ff3f',
+                color: '#e6edf6',
                 fontSize: 'clamp(9px, 1.55vw, 13px)',
-                textShadow: '0 0 8px rgba(0,255,63,0.34), 0 0 16px rgba(0,255,63,0.16)',
+                textShadow: '0 0 8px rgba(195,210,227,0.45), 0 0 16px rgba(159,180,202,0.28)',
               }}
             >
               {asciiFAIVFrames[asciiFrameIndex].join('\n')}
             </pre>
 
             <div className="w-full max-w-[460px]">
-              <div className="h-2 w-full border border-[#00ff3f] bg-[#0a0a0a]">
+              <div className="h-2 w-full border border-[#8591a0] bg-[#dce3eb]">
                 <div
-                  className="h-full bg-[#00ff3f] shadow-[0_0_10px_rgba(0,255,63,0.45)] transition-[width] duration-75 ease-linear"
+                  className="h-full bg-[#7f8b9a] shadow-[0_0_10px_rgba(92,108,126,0.45)] transition-[width] duration-75 ease-linear"
                   style={{ width: `${Math.max(0, Math.min(100, loaderProgress))}%` }}
                 />
               </div>
-              <p className="mt-2 text-center text-[10px] md:text-[11px] uppercase tracking-[0.14em] text-[#9cebb5]">
+              <p className="mt-2 text-center text-[10px] md:text-[11px] uppercase tracking-[0.14em] text-[#4f5862]">
                 Loading FAIV session... {Math.floor(loaderProgress)}%
               </p>
             </div>
