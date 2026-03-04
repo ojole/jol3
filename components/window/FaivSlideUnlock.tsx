@@ -325,104 +325,91 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   ])
 
   return (
-    <div className="h-full w-full bg-gradient-to-br from-[#d8d0d2] via-[#cbc3c5] to-[#beb6b8] text-[#4b525a] px-3 py-4 md:px-5 md:py-5 font-mono">
+    <div className="h-full w-full bg-[#c7cdd6] text-[#445263] px-3 py-4 md:px-5 md:py-5 font-mono">
       <div className="h-full w-full flex flex-col items-center justify-center gap-2 sm:gap-3 md:gap-4">
-        <div className="w-full max-w-[760px] border-[2px] border-t-[#f4f7fb] border-l-[#f4f7fb] border-b-[#88919b] border-r-[#88919b] rounded-sm bg-gradient-to-b from-[#cfd6de] to-[#bac3ce] px-3 py-3 md:px-4 md:py-4 shadow-[0_8px_24px_rgba(50,56,63,0.28)]">
-          <div className="w-full flex justify-center items-center pointer-events-none">
-            <pre
-              className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
-              style={{
-                color: '#e6edf6',
-                fontSize: 'clamp(8px, 1.45vw, 12px)',
-                textShadow: '0 0 8px rgba(195,210,227,0.45), 0 0 16px rgba(159,180,202,0.28)',
-              }}
-            >
-              {asciiFAIVFrames[asciiFrameIndex].join('\n')}
-            </pre>
-          </div>
+        <div className="w-full flex justify-center items-center pointer-events-none">
+          <pre
+            className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
+            style={{
+              color: '#4c5f77',
+              fontSize: 'clamp(8px, 1.45vw, 12px)',
+              textShadow: '0 0 10px rgba(74,93,120,0.18)',
+            }}
+          >
+            {asciiFAIVFrames[asciiFrameIndex].join('\n')}
+          </pre>
+        </div>
 
-          <div className="mt-3 w-full rounded-sm border border-[#9aa5b1] bg-gradient-to-b from-[#dce3eb] via-[#d1d8e1] to-[#c2cad4] px-1.5 py-2.5">
-            <div
-              ref={railRef}
-              className="relative w-full max-w-[700px] mx-auto select-none"
-              style={{ height: `${railGeometry.railHeight}px` }}
-            >
+        <div className="w-full flex items-center justify-center">
+          <div
+            ref={railRef}
+            className="relative w-full max-w-[700px] mx-auto select-none"
+            style={{ height: `${railGeometry.railHeight}px` }}
+          >
+            <Image
+              src="/icons/slidebracket.png"
+              alt="Slide rail"
+              fill
+              sizes="(max-width: 768px) 95vw, 700px"
+              className="object-contain pointer-events-none"
+              priority
+            />
+
+            {chainLinks.map((link, index) => (
               <Image
-                src="/icons/slidebracket.png"
-                alt="Slide rail"
-                fill
-                sizes="(max-width: 768px) 95vw, 700px"
-                className="object-contain pointer-events-none"
-                style={{
-                  filter: 'grayscale(1) saturate(0) brightness(1.18) contrast(1.06) drop-shadow(0 2px 4px rgba(45,52,62,0.35))',
-                }}
-                priority
-              />
-
-              {chainLinks.map((link, index) => (
-                <Image
-                  key={`link-${index}`}
-                  src="/icons/chain.png"
-                  alt=""
-                  width={link.width}
-                  height={link.height}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${link.x}px`,
-                    top: `${link.y}px`,
-                    transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
-                    zIndex: link.zIndex,
-                    opacity: 0.98,
-                    imageRendering: 'pixelated',
-                    filter: 'grayscale(1) saturate(0) brightness(1.22) contrast(1.05)',
-                  }}
-                />
-              ))}
-
-              <Image
-                src="/icons/ball.png"
-                alt="Anchor ball"
-                width={railGeometry.ballSize}
-                height={railGeometry.ballSize}
+                key={`link-${index}`}
+                src="/icons/chain.png"
+                alt=""
+                width={link.width}
+                height={link.height}
                 className="absolute pointer-events-none"
                 style={{
-                  left: `${railGeometry.anchorX}px`,
-                  top: `${railGeometry.centerY}px`,
-                  transform: 'translate(-50%, -50%)',
-                  filter: 'grayscale(1) saturate(0) brightness(1.22) contrast(1.05) drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
+                  left: `${link.x}px`,
+                  top: `${link.y}px`,
+                  transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
+                  zIndex: link.zIndex,
+                  opacity: 0.98,
+                  imageRendering: 'pixelated',
                 }}
               />
+            ))}
 
-              <button
-                ref={dragBallRef}
-                type="button"
-                aria-label="Slide to unlock FAIV"
-                disabled={unlocking}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerCancel}
-                className="absolute rounded-full touch-none disabled:cursor-wait"
-                style={{
-                  left: `${railGeometry.dragX}px`,
-                  top: `${railGeometry.centerY}px`,
-                  width: `${railGeometry.ballSize}px`,
-                  height: `${railGeometry.ballSize}px`,
-                  transform: 'translate(-50%, -50%)',
-                  cursor: dragging ? 'grabbing' : 'grab',
-                  filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
-                }}
-              >
-                <Image
-                  src="/icons/ball.png"
-                  alt=""
-                  fill
-                  sizes="56px"
-                  className="pointer-events-none object-contain"
-                  style={{ filter: 'grayscale(1) saturate(0) brightness(1.2) contrast(1.04)' }}
-                />
-              </button>
-            </div>
+            <Image
+              src="/icons/ball.png"
+              alt="Anchor ball"
+              width={railGeometry.ballSize}
+              height={railGeometry.ballSize}
+              className="absolute pointer-events-none"
+              style={{
+                left: `${railGeometry.anchorX}px`,
+                top: `${railGeometry.centerY}px`,
+                transform: 'translate(-50%, -50%)',
+                filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
+              }}
+            />
+
+            <button
+              ref={dragBallRef}
+              type="button"
+              aria-label="Slide to unlock FAIV"
+              disabled={unlocking}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              className="absolute rounded-full touch-none disabled:cursor-wait"
+              style={{
+                left: `${railGeometry.dragX}px`,
+                top: `${railGeometry.centerY}px`,
+                width: `${railGeometry.ballSize}px`,
+                height: `${railGeometry.ballSize}px`,
+                transform: 'translate(-50%, -50%)',
+                cursor: dragging ? 'grabbing' : 'grab',
+                filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))',
+              }}
+            >
+              <Image src="/icons/ball.png" alt="" fill sizes="56px" className="pointer-events-none object-contain" />
+            </button>
           </div>
         </div>
 

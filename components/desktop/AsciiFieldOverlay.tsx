@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 
-const CELL_SIZE = 14
-const HEAD_RADIUS = 120
-const TAIL_RADIUS = 160
+const CELL_SIZE = 12
+const HEAD_RADIUS = 170
+const WAKE_RADIUS = 230
+const FLOW_TIME_SPEED = 0.00035
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 
@@ -55,6 +56,11 @@ export default function AsciiFieldOverlay() {
       rows = Math.ceil(height / CELL_SIZE)
       dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
 
+      if (smooth.x < -1000 || smooth.y < -1000) {
+        smooth.x = width * 0.5
+        smooth.y = height * 0.5
+      }
+
       canvas.width = Math.floor(width * dpr)
       canvas.height = Math.floor(height * dpr)
       canvas.style.width = `${width}px`
@@ -62,7 +68,7 @@ export default function AsciiFieldOverlay() {
 
       context.setTransform(1, 0, 0, 1, 0, 0)
       context.scale(dpr, dpr)
-      context.font = '11px "Courier New", ui-monospace, monospace'
+      context.font = '10px "Courier New", ui-monospace, monospace'
       context.textAlign = 'center'
       context.textBaseline = 'middle'
     }
@@ -110,46 +116,80 @@ export default function AsciiFieldOverlay() {
         return
       }
 
-      smooth.x += (pointer.x - smooth.x) * 0.16
-      smooth.y += (pointer.y - smooth.y) * 0.16
+      smooth.x += (pointer.x - smooth.x) * 0.14
+      smooth.y += (pointer.y - smooth.y) * 0.14
+      pointer.vx *= 0.91
+      pointer.vy *= 0.91
+      pointer.speed *= 0.96
 
       context.clearRect(0, 0, width, height)
 
-      const trailX = smooth.x - pointer.vx * 4.5
-      const trailY = smooth.y - pointer.vy * 4.5
-      const motionBoost = 0.6 + pointer.speed * 0.75
-      const tick = time * 0.0018
+      const trailX = smooth.x - pointer.vx * 5.7
+      const trailY = smooth.y - pointer.vy * 5.7
+      const motionBoost = 0.75 + pointer.speed * 0.9
+      const t = time * FLOW_TIME_SPEED
 
       for (let row = 0; row < rows; row += 1) {
         const y = row * CELL_SIZE + CELL_SIZE * 0.52
         for (let col = 0; col < cols; col += 1) {
           const x = col * CELL_SIZE + CELL_SIZE * 0.5
 
-          const ripple = Math.sin((x * 0.027) + tick) * 0.22 + Math.cos((y * 0.021) - tick * 1.2) * 0.18
-          const ambient = 0.18 + ripple * 0.18
+          const nx = x / width
+          const ny = y / height
+
+          const warpX =
+            nx +
+            Math.sin((ny * 5.2 + t * 1.9) * Math.PI * 2) * 0.115 +
+            Math.cos((ny * 2.6 - t * 1.2) * Math.PI * 2) * 0.052
+          const warpY =
+            ny +
+            Math.cos((nx * 4.4 - t * 1.35) * Math.PI * 2) * 0.102 +
+            Math.sin((nx * 2.1 + t * 0.86) * Math.PI * 2) * 0.044
+
+          const flowA =
+            Math.sin((warpX * 7.4 + t * 1.5) * Math.PI * 2 + Math.cos((warpY * 4.8 - t * 1.1) * Math.PI * 2) * 0.62)
+          const flowB =
+            Math.cos((warpY * 8.2 - t * 1.35) * Math.PI * 2 + Math.sin((warpX * 4.1 + t * 0.7) * Math.PI * 2) * 0.48)
+          const flowC = Math.sin(((warpX + warpY) * 5.2 - t * 1.75) * Math.PI * 2)
+          const stream = flowA * 0.5 + flowB * 0.34 + flowC * 0.16
 
           let headInfluence = 0
-          let tailInfluence = 0
+          let wakeInfluence = 0
+          let rippleInfluence = 0
           if (pointer.active) {
             const headDistance = Math.hypot(x - smooth.x, y - smooth.y)
             const tailDistance = Math.hypot(x - trailX, y - trailY)
             headInfluence = clamp01(1 - headDistance / HEAD_RADIUS) * motionBoost
-            tailInfluence = clamp01(1 - tailDistance / TAIL_RADIUS) * (0.58 + pointer.speed * 0.45)
+            wakeInfluence = clamp01(1 - tailDistance / WAKE_RADIUS) * (0.68 + pointer.speed * 0.55)
+            rippleInfluence =
+              Math.sin(headDistance * 0.085 - time * 0.014) *
+              clamp01(1 - headDistance / 260) *
+              (0.34 + pointer.speed * 0.6)
           }
 
+          const directedMotion =
+            ((x - smooth.x) * pointer.vx + (y - smooth.y) * pointer.vy) /
+            (Math.max(18, Math.hypot(x - smooth.x, y - smooth.y)) * 22)
+
+          const energy = stream + headInfluence * 0.95 + wakeInfluence * 0.5 + rippleInfluence + directedMotion
+
           let glyph = '_'
-          if (headInfluence > 0.48) {
+          if (energy > 0.82) {
             glyph = '3'
-          } else if (tailInfluence > 0.35) {
+          } else if (energy > 0.28) {
             glyph = '>'
           }
 
-          const alpha = clamp01(ambient + headInfluence * 0.82 + tailInfluence * 0.52) * 0.9
+          const baseAlpha =
+            0.16 +
+            clamp01((stream + 1) * 0.5) * 0.27 +
+            clamp01(Math.sin((col * 0.24) + (row * 0.19) + t * 7.2) * 0.5 + 0.5) * 0.14
+          const alpha = clamp01(baseAlpha + headInfluence * 0.43 + wakeInfluence * 0.32 + Math.abs(rippleInfluence) * 0.22)
           if (alpha < 0.08) {
             continue
           }
 
-          context.fillStyle = `rgba(242, 247, 255, ${alpha.toFixed(3)})`
+          context.fillStyle = `rgba(246, 250, 255, ${alpha.toFixed(3)})`
           context.fillText(glyph, x, y)
         }
       }
@@ -191,7 +231,7 @@ export default function AsciiFieldOverlay() {
         className="pointer-events-none absolute inset-0"
         style={{
           mixBlendMode: 'difference',
-          opacity: 0.7,
+          opacity: 0.82,
         }}
       />
     </div>

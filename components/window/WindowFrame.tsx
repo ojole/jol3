@@ -181,7 +181,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   const windowContent = isStickyNote ? (
     <div
       ref={frameRef}
-      className="absolute pointer-events-auto flex flex-col"
+      className="sticky-note-handle absolute pointer-events-auto flex flex-col"
       style={{
         ...style,
         zIndex: window.zIndex,
@@ -194,38 +194,27 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       role="dialog"
       aria-label={window.title}
     >
-      {/* Sticky Note Header */}
-      <div
-        className="window-titlebar flex items-center justify-end px-1 select-none cursor-move"
-        style={{
-          background: '#efe37f',
-          minHeight: '30px',
-          borderBottom: '1px solid #d4c56a',
-          flexShrink: 0,
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          closeWindow(window.id)
         }}
+        onTouchEnd={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          closeWindow(window.id)
+        }}
+        className="sticky-note-close absolute top-1 right-1 z-20 h-6 w-6 md:h-5 md:w-5 flex items-center justify-center touch-manipulation"
+        style={{ touchAction: 'manipulation', color: '#b8aa4b', lineHeight: 1 }}
+        aria-label="Close window"
+        onMouseEnter={(e) => { e.currentTarget.style.color = '#8a7a2a' }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = '#b8aa4b' }}
       >
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            closeWindow(window.id)
-          }}
-          onTouchEnd={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            closeWindow(window.id)
-          }}
-          className={`${titleBarControlSizeClass} flex items-center justify-center touch-manipulation`}
-          style={{ touchAction: 'manipulation', color: '#c9b84a', lineHeight: 1 }}
-          aria-label="Close window"
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#8a7a2a' }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#c9b84a' }}
-        >
-          <span className="text-xs md:text-[10px] leading-none font-bold pointer-events-none">×</span>
-        </button>
-      </div>
+        <span className="text-xs leading-none font-bold pointer-events-none">×</span>
+      </button>
 
       {/* Sticky Note Content */}
-      <div className="flex-1 overflow-auto bg-[#f7ef9a]">
+      <div className="flex-1 overflow-auto bg-[#f7ef9a] pt-4">
         {children}
       </div>
 
@@ -260,7 +249,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
 
       {!window.isMaximized ? (
         <div
-          className="hidden md:flex absolute right-0 bottom-0 h-5 w-5 items-end justify-end cursor-se-resize"
+          className="sticky-note-resize hidden md:flex absolute right-0 bottom-0 h-5 w-5 items-end justify-end cursor-se-resize"
           onPointerDown={beginStickyResize}
           onPointerMove={moveStickyResize}
           onPointerUp={endStickyResize}
@@ -431,10 +420,14 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   }
 
   // If not maximized, wrap in Draggable
+  const dragHandleSelector = isStickyNote ? '.sticky-note-handle' : '.window-titlebar'
+  const dragCancelSelector = isStickyNote ? '.sticky-note-close, .sticky-note-resize, a, button' : 'button, a'
+
   return (
     <Draggable
       nodeRef={nodeRef}
-      handle=".window-titlebar"
+      handle={dragHandleSelector}
+      cancel={dragCancelSelector}
       position={{ x: window.x, y: window.y }}
       onStop={handleDragStop}
     >
