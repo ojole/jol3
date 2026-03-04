@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Draggable from 'react-draggable'
 import { WindowState } from '@/lib/types'
 import { useWindowStore } from '@/lib/windowStore'
+import { projectsFolderItems } from '@/data/desktopItems'
 
 interface WindowFrameProps {
   window: WindowState
@@ -13,6 +14,7 @@ interface WindowFrameProps {
 
 const FAIV_TOKEN_ENDPOINT =
   process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
+const projectWindowTypeSet = new Set(projectsFolderItems.map((item) => item.windowType))
 
 export default function WindowFrame({ window, children }: WindowFrameProps) {
   const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition } = useWindowStore()
@@ -67,7 +69,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       }
 
   const isStickyNote = window.windowType === 'contact'
-  const showOpenInNewTab = window.windowType === 'faiv'
+  const showOpenInNewTab = projectWindowTypeSet.has(window.windowType)
 
   const openFaivInNewTab = async () => {
     const newTab = globalThis.window?.open('about:blank', '_blank')
@@ -102,6 +104,19 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       console.error('Failed to launch FAIV in new tab', error)
       newTab.location.replace('https://faiv.ai')
     }
+  }
+
+  const openProjectAppInNewTab = async () => {
+    if (window.windowType === 'faiv') {
+      await openFaivInNewTab()
+      return
+    }
+
+    const projectItem = projectsFolderItems.find((item) => item.windowType === window.windowType)
+    if (!projectItem?.url) {
+      return
+    }
+    globalThis.window?.open(projectItem.url, '_blank', 'noopener,noreferrer')
   }
 
   const windowContent = isStickyNote ? (
@@ -241,12 +256,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                void openFaivInNewTab()
+                void openProjectAppInNewTab()
               }}
               onTouchEnd={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
-                void openFaivInNewTab()
+                void openProjectAppInNewTab()
               }}
               className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center text-white touch-manipulation"
               style={{ touchAction: 'manipulation' }}
