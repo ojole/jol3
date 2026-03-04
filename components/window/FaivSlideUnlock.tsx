@@ -24,6 +24,11 @@ type ChainLink = {
   y: number
   rotation: number
   zIndex: number
+  width: number
+  height: number
+  scaleX: number
+  opacity: number
+  filter: string
 }
 
 function solveHangingNodes(start: ChainNode, end: ChainNode, segmentLength: number, linkCount: number): ChainNode[] {
@@ -121,6 +126,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     const jointY = centerY + ballSize * 0.48
     const anchorJointX = anchorX + ballSize * 0.03
     const dragJointX = dragX - ballSize * 0.03
+    const dragEndJointX = dragEndX - ballSize * 0.03
     return {
       ballSize,
       anchorX,
@@ -132,6 +138,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       jointY,
       anchorJointX,
       dragJointX,
+      dragEndJointX,
     }
   }, [progress, railWidth])
 
@@ -237,12 +244,17 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   const chainLinks = useMemo(() => {
     const start = { x: railGeometry.anchorJointX, y: railGeometry.jointY }
     const end = { x: railGeometry.dragJointX, y: railGeometry.jointY }
+    const maxDistance = Math.max(10, railGeometry.dragEndJointX - railGeometry.anchorJointX)
     const distance = Math.max(2, Math.hypot(end.x - start.x, end.y - start.y))
     const linkHeight = railGeometry.ballSize * 0.68
-    const segmentTarget = Math.max(6, linkHeight * 0.54)
-    const desiredLength = distance * (1.16 - progress * 0.06) + railGeometry.ballSize * 0.32
-    const linkCount = clamp(Math.round(desiredLength / segmentTarget), 3, 34)
-    const segmentLength = desiredLength / linkCount
+    const nominalPitch = Math.max(8, linkHeight * 0.35)
+    const linkCount = clamp(Math.round(maxDistance / nominalPitch), 16, 36)
+    const slackFactor = 1.16 - progress * 0.14
+    const segmentLength = clamp(
+      (distance * slackFactor) / linkCount,
+      linkHeight * 0.28,
+      linkHeight * 0.54
+    )
     const nodes = solveHangingNodes(start, end, segmentLength, linkCount)
 
     const links: ChainLink[] = []
@@ -251,13 +263,26 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       const next = nodes[index + 1]
       const midX = (current.x + next.x) * 0.5
       const midY = (current.y + next.y) * 0.5
-      const tangent = (Math.atan2(next.y - current.y, next.x - current.x) * 180) / Math.PI
-      const alternation = index % 2 === 0 ? 7 : -7
+      const tangentRadians = Math.atan2(next.y - current.y, next.x - current.x)
+      const tangent = (tangentRadians * 180) / Math.PI
+      const isFront = index % 2 === 0
+      const normalX = -Math.sin(tangentRadians)
+      const normalY = Math.cos(tangentRadians)
+      const depthOffset = (isFront ? -1 : 1) * linkHeight * 0.06
+      const x = midX + normalX * depthOffset
+      const y = midY + normalY * depthOffset
+      const localRoll = isFront ? -3 : 86
+      const width = Math.max(14, Math.round(linkHeight * CHAIN_ASPECT_RATIO * (isFront ? 1 : 0.8)))
       links.push({
-        x: midX,
-        y: midY,
-        rotation: tangent + alternation,
-        zIndex: 6 + (index % 2),
+        x,
+        y,
+        rotation: tangent + localRoll,
+        zIndex: isFront ? 10 : 8,
+        width,
+        height: Math.max(18, Math.round(linkHeight)),
+        scaleX: isFront ? 1 : 0.78,
+        opacity: isFront ? 0.97 : 0.93,
+        filter: isFront ? 'drop-shadow(0 0 1px rgba(0,0,0,0.2))' : 'brightness(0.92)',
       })
     }
     const startTangent = (Math.atan2(nodes[1].y - nodes[0].y, nodes[1].x - nodes[0].x) * 180) / Math.PI
@@ -273,6 +298,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   }, [
     railGeometry.anchorJointX,
     railGeometry.ballSize,
+    railGeometry.dragEndJointX,
     railGeometry.dragJointX,
     railGeometry.jointY,
     progress,
@@ -305,15 +331,16 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
               key={`link-${index}`}
               src="/icons/chain.png"
               alt=""
-              width={Math.max(14, Math.round(chainLinks.linkHeight * CHAIN_ASPECT_RATIO))}
-              height={Math.max(18, Math.round(chainLinks.linkHeight))}
+              width={link.width}
+              height={link.height}
               className="absolute pointer-events-none"
               style={{
                 left: `${link.x}px`,
                 top: `${link.y}px`,
-                transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
-                opacity: 0.95,
+                transform: `translate(-50%, -50%) rotate(${link.rotation}deg) scaleX(${link.scaleX})`,
+                opacity: link.opacity,
                 zIndex: link.zIndex,
+                filter: link.filter,
               }}
             />
           ))}
