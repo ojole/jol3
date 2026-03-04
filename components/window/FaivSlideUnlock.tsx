@@ -11,6 +11,12 @@ const UNLOCK_THRESHOLD = 0.92
 const TOKEN_ENDPOINT =
   process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
 const CHAIN_ASPECT_RATIO = 463 / 744
+const CHAIN_TARGET_PITCH_PX = 16
+const CHAIN_LINK_MIN = 14
+const CHAIN_LINK_MAX = 26
+const CHAIN_JOINT_RATIO = 0.82
+const CHAIN_SLACK_START = 1.22
+const CHAIN_SLACK_END = 1.02
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -242,16 +248,16 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     const start = { x: railGeometry.anchorJointX, y: railGeometry.jointY }
     const end = { x: railGeometry.dragJointX, y: railGeometry.jointY }
     const maxDistance = Math.max(10, railGeometry.dragEndJointX - railGeometry.anchorJointX)
-    const distance = Math.max(2, Math.hypot(end.x - start.x, end.y - start.y))
-    const linkHeight = railGeometry.ballSize * 0.68
-    const nominalPitch = Math.max(8, linkHeight * 0.42)
-    const linkCount = clamp(Math.round(maxDistance / nominalPitch), 16, 36)
-    const slackFactor = 1.14 - progress * 0.12
-    const segmentLength = clamp(
-      (distance * slackFactor) / linkCount,
-      linkHeight * 0.33,
-      linkHeight * 0.48
+    const linkCount = clamp(Math.round(maxDistance / CHAIN_TARGET_PITCH_PX), CHAIN_LINK_MIN, CHAIN_LINK_MAX)
+    const tautSegmentLength = maxDistance / linkCount
+    const slackFactor = CHAIN_SLACK_START - (CHAIN_SLACK_START - CHAIN_SLACK_END) * progress
+    const segmentLength = tautSegmentLength * slackFactor
+    const linkHeight = clamp(
+      segmentLength / CHAIN_JOINT_RATIO,
+      railGeometry.ballSize * 0.46,
+      railGeometry.ballSize * 0.78
     )
+    const linkWidth = Math.max(14, Math.round(linkHeight * CHAIN_ASPECT_RATIO))
     const nodes = solveHangingNodes(start, end, segmentLength, linkCount)
 
     const links: ChainLink[] = []
@@ -261,21 +267,14 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       const midX = (current.x + next.x) * 0.5
       const midY = (current.y + next.y) * 0.5
       const tangentRadians = Math.atan2(next.y - current.y, next.x - current.x)
-      const tangent = (tangentRadians * 180) / Math.PI
-      const isFront = index % 2 === 0
-      const normalX = -Math.sin(tangentRadians)
-      const normalY = Math.cos(tangentRadians)
-      const depthOffset = (isFront ? -1 : 1) * linkHeight * 0.04
-      const x = midX + normalX * depthOffset
-      const y = midY + normalY * depthOffset
-      const localRoll = isFront ? -2 : 88
-      const width = Math.max(14, Math.round(linkHeight * CHAIN_ASPECT_RATIO))
+      const tangent = (tangentRadians * 180) / Math.PI + 90
+      const localRoll = index % 2 === 0 ? 1.5 : -1.5
       links.push({
-        x,
-        y,
+        x: midX,
+        y: midY,
         rotation: tangent + localRoll,
-        zIndex: isFront ? 10 : 9,
-        width,
+        zIndex: 10 + (index % 2),
+        width: linkWidth,
         height: Math.max(18, Math.round(linkHeight)),
       })
     }
@@ -325,6 +324,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
                 transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
                 zIndex: link.zIndex,
                 opacity: 0.98,
+                imageRendering: 'pixelated',
               }}
             />
           ))}
