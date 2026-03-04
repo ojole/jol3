@@ -8,6 +8,8 @@ interface FaivSlideUnlockProps {
 }
 
 const UNLOCK_THRESHOLD = 0.92
+const TOKEN_ENDPOINT =
+  process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -77,8 +79,9 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     setError(null)
 
     try {
-      const response = await fetch('/api/faiv-embed-token', {
+      const response = await fetch(TOKEN_ENDPOINT, {
         method: 'GET',
+        mode: 'cors',
         cache: 'no-store',
       })
       const payload = (await response.json().catch(() => ({}))) as {
@@ -270,4 +273,3 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
     </div>
   )
 }
-
