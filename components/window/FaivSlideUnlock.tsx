@@ -14,9 +14,10 @@ const CHAIN_ASPECT_RATIO = 463 / 744
 const CHAIN_TARGET_PITCH_PX = 16
 const CHAIN_LINK_MIN = 14
 const CHAIN_LINK_MAX = 26
-const CHAIN_JOINT_RATIO = 0.82
+const CHAIN_JOINT_RATIO = 0.68
 const CHAIN_SLACK_START = 1.22
 const CHAIN_SLACK_END = 1.02
+const CHAIN_INTERLOCK_ANGLE_DEG = 14
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -268,11 +269,11 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       const midY = (current.y + next.y) * 0.5
       const tangentRadians = Math.atan2(next.y - current.y, next.x - current.x)
       const tangent = (tangentRadians * 180) / Math.PI + 90
-      const localRoll = index % 2 === 0 ? 1.5 : -1.5
+      const interlockRoll = index % 2 === 0 ? -CHAIN_INTERLOCK_ANGLE_DEG : CHAIN_INTERLOCK_ANGLE_DEG
       links.push({
         x: midX,
         y: midY,
-        rotation: tangent + localRoll,
+        rotation: tangent + interlockRoll,
         zIndex: 10 + (index % 2),
         width: linkWidth,
         height: Math.max(18, Math.round(linkHeight)),
