@@ -8,6 +8,9 @@ const MIN_ACTIVE_SPEED = 0.008
 const INJECT_RADIUS_PX = 92
 const WAKE_RADIUS_PX = 132
 const TAU = Math.PI * 2
+const GLYPH_HEAD = 'e'
+const GLYPH_WAKE = '>'
+const GLYPH_IDLE = '_'
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
@@ -112,7 +115,9 @@ export default function AsciiFieldOverlay() {
 
       context.setTransform(1, 0, 0, 1, 0, 0)
       context.scale(dpr, dpr)
-      context.font = '10px "Courier New", ui-monospace, monospace'
+      context.font =
+        '700 12px "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+      context.globalCompositeOperation = 'source-over'
       context.textAlign = 'center'
       context.textBaseline = 'middle'
     }
@@ -311,18 +316,19 @@ export default function AsciiFieldOverlay() {
           const velocityMag = Math.hypot(velXA[index], velYA[index])
           const shimmer =
             Math.sin((col * 0.23 + row * 0.17) + time * FLOW_TIME_SPEED * 10.8) * 0.5 + 0.5
-          const ambient = 0.18 + shimmer * 0.18
-          const signal = ambient + pulse * 0.96 + velocityMag * 0.26
+          const ambient = 0.16 + shimmer * 0.15
+          const signal = ambient + pulse * 0.92 + velocityMag * 0.24
 
-          let glyph = '_'
-          if (signal > 0.84) {
-            glyph = 'e'
-          } else if (signal > 0.44) {
-            glyph = '>'
+          let glyph = GLYPH_IDLE
+          if (signal > 1.02) {
+            glyph = GLYPH_HEAD
+          } else if (signal > 0.53) {
+            glyph = GLYPH_WAKE
           }
 
-          const alpha = clamp01(0.038 + ambient * 0.3 + pulse * 0.5 + velocityMag * 0.13)
-          if (alpha < 0.052) {
+          const glyphBoost = glyph === GLYPH_HEAD ? 0.18 : glyph === GLYPH_WAKE ? 0.09 : 0
+          const alpha = clamp01(0.05 + ambient * 0.32 + pulse * 0.42 + velocityMag * 0.11 + glyphBoost)
+          if (alpha < 0.06) {
             continue
           }
 
@@ -365,8 +371,7 @@ export default function AsciiFieldOverlay() {
         data-ascii-overlay-state="running"
         className="pointer-events-none absolute inset-0"
         style={{
-          mixBlendMode: 'difference',
-          opacity: 0.78,
+          opacity: 0.8,
         }}
       />
     </div>
