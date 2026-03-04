@@ -11,6 +11,9 @@ interface WindowFrameProps {
   children: React.ReactNode
 }
 
+const FAIV_TOKEN_ENDPOINT =
+  process.env.NEXT_PUBLIC_FAIV_TOKEN_ENDPOINT || 'https://api.faiv.ai/api/faiv-embed-token'
+
 export default function WindowFrame({ window, children }: WindowFrameProps) {
   const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition } = useWindowStore()
   const frameRef = useRef<HTMLDivElement>(null)
@@ -65,6 +68,41 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
 
   const isStickyNote = window.windowType === 'contact'
   const showOpenInNewTab = window.windowType === 'faiv'
+
+  const openFaivInNewTab = async () => {
+    const newTab = globalThis.window?.open('about:blank', '_blank')
+    if (!newTab) {
+      return
+    }
+
+    try {
+      newTab.opener = null
+      newTab.document.title = 'Launching FAIV...'
+
+      const response = await fetch(FAIV_TOKEN_ENDPOINT, {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-store',
+      })
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        token?: string
+        embedBaseUrl?: string
+        error?: string
+      }
+
+      if (!response.ok || !payload.token) {
+        throw new Error(payload.error || 'Token request failed.')
+      }
+
+      const baseUrl = (payload.embedBaseUrl || 'https://faiv.ai').replace(/\/+$/, '')
+      const launchUrl = `${baseUrl}/embed?token=${encodeURIComponent(payload.token)}`
+      newTab.location.replace(launchUrl)
+    } catch (error) {
+      console.error('Failed to launch FAIV in new tab', error)
+      newTab.location.replace('https://faiv.ai')
+    }
+  }
 
   const windowContent = isStickyNote ? (
     <div
@@ -203,12 +241,12 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                globalThis.window?.open('https://faiv.ai', '_blank', 'noopener,noreferrer')
+                void openFaivInNewTab()
               }}
               onTouchEnd={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
-                globalThis.window?.open('https://faiv.ai', '_blank', 'noopener,noreferrer')
+                void openFaivInNewTab()
               }}
               className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center text-white touch-manipulation"
               style={{ touchAction: 'manipulation' }}
