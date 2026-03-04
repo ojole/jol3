@@ -325,15 +325,15 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   ])
 
   return (
-    <div className="h-full w-full bg-[#c7cdd6] text-[#445263] px-3 py-4 md:px-5 md:py-5 font-mono">
+    <div className="h-full w-full bg-[#d9c185] text-[#6d5224] px-3 py-4 md:px-5 md:py-5 font-mono">
       <div className="h-full w-full flex flex-col items-center justify-center gap-2 sm:gap-3 md:gap-4">
         <div className="w-full flex justify-center items-center pointer-events-none">
           <pre
             className="m-0 text-center leading-[1.04] tracking-[0.01em] whitespace-pre"
             style={{
-              color: '#4c5f77',
+              color: '#6f4f22',
               fontSize: 'clamp(8px, 1.45vw, 12px)',
-              textShadow: '0 0 10px rgba(74,93,120,0.18)',
+              textShadow: '0 0 10px rgba(111,79,34,0.2)',
             }}
           >
             {asciiFAIVFrames[asciiFrameIndex].join('\n')}

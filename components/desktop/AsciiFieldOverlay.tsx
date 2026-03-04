@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 
-const CELL_SIZE = 12
-const HEAD_RADIUS = 170
-const WAKE_RADIUS = 230
+const CELL_SIZE = 13
+const HEAD_RADIUS = 110
+const WAKE_RADIUS = 165
+const FIELD_RADIUS = 240
 const FLOW_TIME_SPEED = 0.00035
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
@@ -126,8 +127,9 @@ export default function AsciiFieldOverlay() {
 
       const trailX = smooth.x - pointer.vx * 5.7
       const trailY = smooth.y - pointer.vy * 5.7
-      const motionBoost = 0.75 + pointer.speed * 0.9
+      const motionBoost = 0.1 + pointer.speed * 1.25
       const t = time * FLOW_TIME_SPEED
+      const motionActive = pointer.active && pointer.speed > 0.015
 
       for (let row = 0; row < rows; row += 1) {
         const y = row * CELL_SIZE + CELL_SIZE * 0.52
@@ -156,11 +158,14 @@ export default function AsciiFieldOverlay() {
           let headInfluence = 0
           let wakeInfluence = 0
           let rippleInfluence = 0
-          if (pointer.active) {
+          let fieldInfluence = 0
+          if (motionActive) {
             const headDistance = Math.hypot(x - smooth.x, y - smooth.y)
             const tailDistance = Math.hypot(x - trailX, y - trailY)
             headInfluence = clamp01(1 - headDistance / HEAD_RADIUS) * motionBoost
             wakeInfluence = clamp01(1 - tailDistance / WAKE_RADIUS) * (0.68 + pointer.speed * 0.55)
+            fieldInfluence =
+              clamp01(1 - headDistance / FIELD_RADIUS) * (0.35 + pointer.speed * 0.65)
             rippleInfluence =
               Math.sin(headDistance * 0.085 - time * 0.014) *
               clamp01(1 - headDistance / 260) *
@@ -171,21 +176,33 @@ export default function AsciiFieldOverlay() {
             ((x - smooth.x) * pointer.vx + (y - smooth.y) * pointer.vy) /
             (Math.max(18, Math.hypot(x - smooth.x, y - smooth.y)) * 22)
 
-          const energy = stream + headInfluence * 0.95 + wakeInfluence * 0.5 + rippleInfluence + directedMotion
+          const streamStrength = motionActive ? 0.08 + fieldInfluence * 0.76 : 0.03
+          const energy =
+            stream * streamStrength +
+            headInfluence * 1.02 +
+            wakeInfluence * 0.55 +
+            rippleInfluence +
+            directedMotion * 0.58
 
           let glyph = '_'
-          if (energy > 0.82) {
-            glyph = '3'
-          } else if (energy > 0.28) {
+          if (energy > 0.68) {
+            glyph = 'e'
+          } else if (energy > 0.24) {
             glyph = '>'
           }
 
-          const baseAlpha =
-            0.16 +
-            clamp01((stream + 1) * 0.5) * 0.27 +
-            clamp01(Math.sin((col * 0.24) + (row * 0.19) + t * 7.2) * 0.5 + 0.5) * 0.14
-          const alpha = clamp01(baseAlpha + headInfluence * 0.43 + wakeInfluence * 0.32 + Math.abs(rippleInfluence) * 0.22)
-          if (alpha < 0.08) {
+          const idleShimmer = clamp01(Math.sin((col * 0.24) + (row * 0.19) + t * 7.2) * 0.5 + 0.5)
+          const baseAlpha = motionActive
+            ? 0.016 + fieldInfluence * 0.19 + idleShimmer * 0.03
+            : 0.007 + idleShimmer * 0.014
+          const alpha = clamp01(
+            baseAlpha +
+              headInfluence * 0.39 +
+              wakeInfluence * 0.26 +
+              Math.abs(rippleInfluence) * 0.16
+          )
+          const alphaThreshold = motionActive ? 0.055 : 0.035
+          if (alpha < alphaThreshold) {
             continue
           }
 
@@ -231,7 +248,7 @@ export default function AsciiFieldOverlay() {
         className="pointer-events-none absolute inset-0"
         style={{
           mixBlendMode: 'difference',
-          opacity: 0.82,
+          opacity: 0.58,
         }}
       />
     </div>
