@@ -43,12 +43,18 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
 
   const railGeometry = useMemo(() => {
     const ballSize = clamp(Math.round(railWidth * 0.09), 34, 54)
-    const anchorX = ballSize * 0.8
-    const dragStartX = anchorX + ballSize * 1.15
-    const dragEndX = railWidth - ballSize * 0.8
+    const railHeight = Math.round(ballSize * 2.8)
+    const centerY = railHeight * 0.53
+    const slotLeft = railWidth * 0.235
+    const slotRight = railWidth * 0.815
+    const anchorX = slotLeft - ballSize * 0.85
+    const dragStartX = slotLeft + ballSize * 0.58
+    const dragEndX = slotRight - ballSize * 0.58
     const travelDistance = Math.max(1, dragEndX - dragStartX)
     const dragX = dragStartX + progress * travelDistance
-    const centerY = ballSize * 1.3
+    const jointY = centerY + ballSize * 0.32
+    const anchorJointX = anchorX + ballSize * 0.36
+    const dragJointX = dragX - ballSize * 0.36
     return {
       ballSize,
       anchorX,
@@ -56,7 +62,10 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
       dragX,
       travelDistance,
       centerY,
-      railHeight: Math.round(ballSize * 2.6),
+      railHeight,
+      jointY,
+      anchorJointX,
+      dragJointX,
     }
   }, [progress, railWidth])
 
@@ -160,21 +169,34 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
   }
 
   const chainLinks = useMemo(() => {
-    const count = Math.max(6, Math.round(8 + progress * 8))
+    const span = Math.max(0, railGeometry.dragJointX - railGeometry.anchorJointX)
+    const baseSpacing = Math.max(12, railGeometry.ballSize * 0.42)
+    const count = clamp(Math.round(span / baseSpacing), 8, 22)
+    const sagAmplitude = railGeometry.ballSize * 0.2 + span * 0.11
     const links = []
-    const sagAmplitude = 4 + progress * 18
+    const pointAt = (t: number) => {
+      const x = railGeometry.anchorJointX + span * t
+      const y = railGeometry.jointY + Math.sin(Math.PI * t) * sagAmplitude
+      return { x, y }
+    }
     for (let i = 0; i < count; i += 1) {
       const t = (i + 1) / (count + 1)
-      const x = railGeometry.anchorX + (railGeometry.dragX - railGeometry.anchorX) * t
-      const y = railGeometry.centerY + Math.sin(Math.PI * t) * sagAmplitude
+      const { x, y } = pointAt(t)
+      const prev = pointAt(Math.max(0, t - 0.03))
+      const next = pointAt(Math.min(1, t + 0.03))
       links.push({
         x,
         y,
-        rotation: (progress * 28 - 14) * (t - 0.5),
+        rotation: (Math.atan2(next.y - prev.y, next.x - prev.x) * 180) / Math.PI,
       })
     }
     return links
-  }, [progress, railGeometry.anchorX, railGeometry.dragX, railGeometry.centerY])
+  }, [
+    railGeometry.anchorJointX,
+    railGeometry.ballSize,
+    railGeometry.dragJointX,
+    railGeometry.jointY,
+  ])
 
   return (
     <div className="h-full w-full bg-[#090909] text-[#d7ffe1] p-4 md:p-5 font-mono flex flex-col">
@@ -225,7 +247,7 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
               left: `${railGeometry.anchorX}px`,
               top: `${railGeometry.centerY}px`,
               transform: 'translate(-50%, -50%)',
-              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+              filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.45))',
             }}
           />
 
@@ -251,17 +273,6 @@ export default function FaivSlideUnlock({ onUnlocked }: FaivSlideUnlockProps) {
           >
             <Image src="/icons/ball.png" alt="" fill sizes="56px" className="pointer-events-none object-contain" />
           </button>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between text-xs text-[#bfe7c8]">
-          <span>{unlocking ? 'Negotiating secure session...' : 'Drag the orb across the rail'}</span>
-          <span>{Math.round(progress * 100)}%</span>
-        </div>
-        <div className="mt-2 h-1 w-full bg-[#1d1d1d]">
-          <div
-            className="h-full bg-[#8edda7] transition-[width] duration-100"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
         </div>
 
         {error ? (
