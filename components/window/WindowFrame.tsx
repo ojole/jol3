@@ -64,6 +64,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       }
 
   const isStickyNote = window.windowType === 'contact'
+  const showOpenInNewTab = window.windowType === 'faiv'
 
   const windowContent = isStickyNote ? (
     <div
@@ -198,6 +199,26 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-1 relative z-10">
+          {showOpenInNewTab ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                globalThis.window?.open('https://faiv.ai', '_blank', 'noopener,noreferrer')
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                globalThis.window?.open('https://faiv.ai', '_blank', 'noopener,noreferrer')
+              }}
+              className="w-9 h-9 md:w-6 md:h-6 bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] rounded-sm transition-colors flex items-center justify-center text-white touch-manipulation"
+              style={{ touchAction: 'manipulation' }}
+              aria-label="Open FAIV in new tab"
+              title="Open FAIV in new tab"
+            >
+              <span className="text-sm md:text-xs leading-none pointer-events-none">↗</span>
+            </button>
+          ) : null}
+
           {/* Minimize Button */}
           <button
             onClick={(e) => {

@@ -8,6 +8,7 @@ import ProjectsWindow from './windows/ProjectsWindow'
 import StickyNoteWindow from './windows/StickyNoteWindow'
 import IframeWindow from './windows/IframeWindow'
 import SnakeWindow from './windows/SnakeWindow'
+import FaivWindow from './windows/FaivWindow'
 import { WindowType } from '@/lib/types'
 import { projectsFolderItems } from '@/data/desktopItems'
 
@@ -29,8 +30,7 @@ export default function WindowManager() {
         return <IframeWindow url={emcryptedItem?.url || 'https://emcrypted.com'} title="emcrypted" />
       }
       case 'faiv': {
-        const faivItem = projectsFolderItems.find(item => item.id === 'faiv')
-        return <IframeWindow url={faivItem?.url || 'https://faiv.ai'} title="faiv" />
+        return <FaivWindow />
       }
       case 'snake':
         return <SnakeWindow />
