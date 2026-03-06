@@ -14,7 +14,7 @@ export const getIconPath = (type: string): string => {
 export const desktopItems: DesktopItem[] = [
   {
     id: 'projects',
-    label: 'Projects',
+    label: 'projects',
     type: 'folder',
     side: 'left',
     windowType: 'projects',

@@ -103,7 +103,7 @@ export default function Taskbar() {
         type="button"
         style={{ imageRendering: 'pixelated' }}
       >
-        <span className="text-[var(--color-text-primary)]">Start</span>
+        <span className="text-[var(--color-text-primary)]">start</span>
       </button>
 
       {/* Start Menu */}
@@ -126,7 +126,7 @@ export default function Taskbar() {
                 className="flex-shrink-0 pixelated"
                 draggable={false}
               />
-              <span>Snake</span>
+              <span>snake</span>
             </button>
           </div>
         </div>
