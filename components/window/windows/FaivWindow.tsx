@@ -118,7 +118,8 @@ export default function FaivWindow() {
               style={{
                 color: FAIV_NEON,
                 fontSize: 'clamp(9px, 1.55vw, 13px)',
-                textShadow: '0 0 12px rgba(87,255,48,0.34)',
+                fontWeight: 700,
+                textShadow: '0 0 11px rgba(87,255,48,0.35), 0 0 22px rgba(87,255,48,0.36)',
               }}
             >
               {asciiFAIVFrames[asciiFrameIndex].join('\n')}

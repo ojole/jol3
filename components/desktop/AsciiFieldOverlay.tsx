@@ -8,7 +8,7 @@ const MIN_ACTIVE_SPEED = 0.008
 const INJECT_RADIUS_PX = 92
 const WAKE_RADIUS_PX = 132
 const TAU = Math.PI * 2
-const GLYPH_HEAD = 'e'
+const GLYPH_HEAD = '3'
 const GLYPH_WAKE = '>'
 const GLYPH_IDLE = '_'
 
