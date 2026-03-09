@@ -36,9 +36,18 @@ export default function DesktopShell() {
     let rafId: number | null = null
     let settleRafId: number | null = null
     let settleUntil = 0
+    let suppressSnapUntil = 0
     let scheduledTimers: number[] = []
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
+
+    const nowMs = () => globalThis.performance?.now?.() || Date.now()
+
+    const blockSnap = (durationMs: number) => {
+      suppressSnapUntil = Math.max(suppressSnapUntil, nowMs() + Math.max(0, durationMs))
+    }
+
+    const isSnapSuppressed = () => nowMs() < suppressSnapUntil
 
     const clearScheduledSnap = () => {
       scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
@@ -48,6 +57,22 @@ export default function DesktopShell() {
         globalThis.window?.cancelAnimationFrame(settleRafId)
         settleRafId = null
       }
+    }
+
+    const resyncHitTesting = () => {
+      const shellRoot = globalThis.document?.getElementById('desktop-shell-root')
+      if (!(shellRoot instanceof HTMLElement)) {
+        return
+      }
+      shellRoot.style.willChange = 'transform'
+      shellRoot.style.transform = 'translateZ(0)'
+      const clearNudge = () => {
+        shellRoot.style.transform = ''
+        shellRoot.style.willChange = ''
+      }
+      globalThis.window?.requestAnimationFrame(() => {
+        globalThis.window?.requestAnimationFrame(clearNudge)
+      })
     }
 
     const snapViewport = (soft = false) => {
@@ -62,6 +87,7 @@ export default function DesktopShell() {
       if (globalThis.document?.body) {
         globalThis.document.body.scrollTop = 0
       }
+      resyncHitTesting()
     }
 
     const hasTopBarDrift = () => {
@@ -94,6 +120,10 @@ export default function DesktopShell() {
       return delta > 42 || vv.offsetTop > 8
     }
 
+    const canSnapViewport = () => {
+      return !keyboardLikelyOpen && !isKeyboardViewportCompressed() && !isSnapSuppressed()
+    }
+
     const startSettleLoop = (durationMs: number) => {
       const now = globalThis.performance?.now() || Date.now()
       settleUntil = Math.max(settleUntil, now + durationMs)
@@ -103,7 +133,7 @@ export default function DesktopShell() {
       const tick = () => {
         const frameNow = globalThis.performance?.now() || Date.now()
         const { open } = readKeyboardState()
-        if (!open && hasDesktopDrift()) {
+        if (!open && canSnapViewport() && hasDesktopDrift()) {
           snapViewport(true)
         }
         if (frameNow < settleUntil) {
@@ -115,12 +145,15 @@ export default function DesktopShell() {
       settleRafId = globalThis.window?.requestAnimationFrame(tick) ?? null
     }
 
-    const scheduleSnap = (delays: number[]) => {
+    const scheduleSnap = (delays: number[], suppressMs = 260) => {
       clearScheduledSnap()
-      snapViewport(true)
+      blockSnap(suppressMs)
+      if (canSnapViewport()) {
+        snapViewport(true)
+      }
       delays.forEach((delay) => {
         const timerId = globalThis.window?.setTimeout(() => {
-          if (!keyboardLikelyOpen && !isKeyboardViewportCompressed()) {
+          if (canSnapViewport()) {
             snapViewport(true)
           }
         }, delay)
@@ -155,7 +188,7 @@ export default function DesktopShell() {
       }
       const baseline = Math.max(1, stableViewportHeight)
       const delta = baseline - vv.height
-      const open = delta > 110 || vv.offsetTop > 80
+      const open = delta > 90 || vv.offsetTop > 55
       const justClosed = keyboardLikelyOpen && !open
       keyboardLikelyOpen = open
       return { open, justClosed }
@@ -173,10 +206,10 @@ export default function DesktopShell() {
           return
         }
         if (justClosed) {
-          scheduleSnap([90, 200, 360, 560])
+          scheduleSnap([90, 200, 360, 560], 260)
           return
         }
-        if (!keyboardLikelyOpen && hasDesktopDrift()) {
+        if (canSnapViewport() && hasDesktopDrift()) {
           startSettleLoop(520)
           snapViewport(true)
         }
@@ -187,6 +220,7 @@ export default function DesktopShell() {
       const target = event.target
       if (target instanceof HTMLIFrameElement) {
         keyboardLikelyOpen = true
+        blockSnap(1200)
         clearScheduledSnap()
         return
       }
@@ -194,10 +228,12 @@ export default function DesktopShell() {
         return
       }
       keyboardLikelyOpen = true
+      blockSnap(1200)
       clearScheduledSnap()
     }
 
     const handleInteractionIntent = () => {
+      blockSnap(640)
       clearScheduledSnap()
     }
 
@@ -208,7 +244,7 @@ export default function DesktopShell() {
         }
         const { open } = readKeyboardState()
         if (!open) {
-          scheduleSnap([90, 190, 340, 540])
+          scheduleSnap([90, 190, 340, 540], 320)
         }
       }, 120)
     }
@@ -220,18 +256,18 @@ export default function DesktopShell() {
       if (!isEditableElement(event.target as Element | null)) {
         return
       }
-      scheduleSnap([120, 220, 380, 580])
+      scheduleSnap([120, 220, 380, 580], 520)
     }
 
     const handleFormSubmit = () => {
-      scheduleSnap([120, 220, 380, 580])
+      scheduleSnap([120, 220, 380, 580], 520)
     }
 
     const monitorKeyboardClose = () => {
       const { justClosed } = readKeyboardState()
       if (justClosed) {
-        scheduleSnap([90, 200, 360, 560])
-      } else if (!keyboardLikelyOpen && hasDesktopDrift()) {
+        scheduleSnap([90, 200, 360, 560], 260)
+      } else if (canSnapViewport() && hasDesktopDrift()) {
         startSettleLoop(520)
         snapViewport(true)
       }
@@ -241,7 +277,7 @@ export default function DesktopShell() {
       stableViewportHeight =
         globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || stableViewportHeight
       keyboardLikelyOpen = false
-      scheduleSnap([140, 320, 540])
+      scheduleSnap([140, 320, 540], 320)
     }
 
     const intervalId = globalThis.window?.setInterval(monitorKeyboardClose, 220)
@@ -291,6 +327,7 @@ export default function DesktopShell() {
     <>
       <DynamicFavicon />
       <div
+        id="desktop-shell-root"
         className="w-full flex flex-col relative scanlines"
         style={{
           position: 'fixed',
