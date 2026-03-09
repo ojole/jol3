@@ -29,6 +29,73 @@ export default function DesktopShell() {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [windows, closeWindow])
 
+  // iOS Safari sometimes keeps a zoomed/shifted viewport after text-field focus in embedded apps.
+  // Keep the parent desktop pinned to the top-left layout origin.
+  useEffect(() => {
+    const snapViewport = () => {
+      if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0) {
+        globalThis.window?.scrollTo(0, 0)
+      }
+    }
+
+    const scheduleSnap = (delays: number[]) => {
+      delays.forEach((delay) => {
+        globalThis.window?.setTimeout(snapViewport, delay)
+      })
+    }
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target) {
+        return
+      }
+      const isInputTarget =
+        target.tagName === 'IFRAME' ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      if (!isInputTarget) {
+        return
+      }
+      scheduleSnap([0, 90, 220])
+    }
+
+    const handleFocusOut = () => {
+      scheduleSnap([60, 180, 360, 620])
+    }
+
+    const handleViewportShift = () => {
+      const vv = globalThis.window?.visualViewport
+      if (!vv) {
+        snapViewport()
+        return
+      }
+      if (vv.offsetTop !== 0 || vv.pageTop !== 0) {
+        scheduleSnap([0, 120])
+      }
+    }
+
+    const handleOrientationChange = () => {
+      scheduleSnap([120, 360])
+    }
+
+    globalThis.window?.addEventListener('focusin', handleFocusIn, true)
+    globalThis.window?.addEventListener('focusout', handleFocusOut, true)
+    globalThis.window?.addEventListener('orientationchange', handleOrientationChange)
+    globalThis.window?.addEventListener('resize', handleViewportShift, { passive: true })
+    globalThis.window?.visualViewport?.addEventListener('resize', handleViewportShift, { passive: true })
+    globalThis.window?.visualViewport?.addEventListener('scroll', handleViewportShift, { passive: true })
+
+    return () => {
+      globalThis.window?.removeEventListener('focusin', handleFocusIn, true)
+      globalThis.window?.removeEventListener('focusout', handleFocusOut, true)
+      globalThis.window?.removeEventListener('orientationchange', handleOrientationChange)
+      globalThis.window?.removeEventListener('resize', handleViewportShift)
+      globalThis.window?.visualViewport?.removeEventListener('resize', handleViewportShift)
+      globalThis.window?.visualViewport?.removeEventListener('scroll', handleViewportShift)
+    }
+  }, [])
+
   return (
     <>
       <DynamicFavicon />
@@ -36,6 +103,7 @@ export default function DesktopShell() {
         className="w-full flex flex-col relative scanlines"
         style={{
           height: '100dvh',
+          paddingTop: 'var(--safe-top)',
           background: 'linear-gradient(135deg, #d8cfd0 0%, #c9c0c1 50%, #bab1b2 100%)',
         }}
       >

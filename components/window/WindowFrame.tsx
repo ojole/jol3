@@ -255,7 +255,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
         return null
       }
       return (
-        <div className="absolute inset-0 z-[70] bg-[rgba(8,10,14,0.95)] text-[#efe6c5] backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-[70] bg-[rgba(8,10,14,0.95)] text-[#efe6c5] backdrop-blur-[1px] pointer-events-auto">
           <div className="h-full overflow-y-auto p-4">
             <div className="rounded-md border border-[#7d6736] bg-[rgba(22,18,10,0.9)] shadow-[0_0_0_1px_rgba(255,220,130,0.15)]">
               <div className="flex items-center justify-between border-b border-[#6a5427] px-3 py-2">
@@ -294,7 +294,10 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       }
       return (
         <div className="absolute right-5 top-[66px] z-[65] w-[348px] max-w-[44vw]">
-          <div className="max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+          <div
+            className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
+            onWheel={(event) => event.stopPropagation()}
+          >
             <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
             <p className="mt-2">{projectInfo.what}</p>
             <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
@@ -304,23 +307,51 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       )
     }
 
-    if (placement !== 'outside') {
+    const panelMaxWidth = 348
+    const panelGap = 24
+    const panelMinWidth = 236
+    const edgePadding = 12
+    const viewportWidthResolved = viewportWidth || globalThis.window?.innerWidth || 0
+    const rightSpace = Math.max(0, viewportWidthResolved - (window.x + window.width))
+    const leftSpace = Math.max(0, window.x)
+    const rightCapacity = Math.max(0, rightSpace - panelGap - edgePadding)
+    const leftCapacity = Math.max(0, leftSpace - panelGap - edgePadding)
+    const canFitRight = rightCapacity >= panelMinWidth
+    const canFitLeft = leftCapacity >= panelMinWidth
+    const placeOnRight = canFitRight && (!canFitLeft || rightCapacity >= leftCapacity)
+    const shouldUseInsideFallback = !canFitRight && !canFitLeft
+    const outsideWidth = Math.min(
+      panelMaxWidth,
+      Math.max(panelMinWidth, placeOnRight ? rightCapacity : leftCapacity)
+    )
+
+    if (shouldUseInsideFallback && placement === 'inside') {
+      return (
+        <div className="absolute right-4 top-[64px] z-[65] w-[280px] max-w-[min(40vw,348px)]">
+          <div
+            className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(56vh,420px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
+            onWheel={(event) => event.stopPropagation()}
+          >
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
+            <p className="mt-2">{projectInfo.what}</p>
+            <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
+            <p className="mt-2 text-[#f0dfac]">{projectInfo.inspiration}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (placement !== 'outside' || shouldUseInsideFallback) {
       return null
     }
 
-    const panelWidth = 348
-    const panelGap = 24
-    const rightSpace = Math.max(0, viewportWidth - (window.x + window.width))
-    const leftSpace = Math.max(0, window.x)
-    const placeOnRight = rightSpace >= panelWidth + panelGap || rightSpace >= leftSpace
-
     return (
       <div
-        className="absolute top-[56px] z-[65] hidden md:block"
+        className="absolute top-[56px] z-[65] hidden md:block pointer-events-auto"
         style={
           placeOnRight
-            ? { left: `calc(100% + ${panelGap}px)`, width: `${panelWidth}px` }
-            : { right: `calc(100% + ${panelGap}px)`, width: `${panelWidth}px` }
+            ? { left: `${window.width + panelGap}px`, width: `${outsideWidth}px` }
+            : { right: `${window.width + panelGap}px`, width: `${outsideWidth}px` }
         }
       >
         <div
@@ -338,7 +369,10 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
           />
           <span className="absolute left-[58px] top-[24px] h-[8px] w-[8px] rounded-full border border-[#d4ad60] bg-[#f6db93] shadow-[0_0_5px_rgba(230,197,118,0.55)]" />
         </div>
-        <aside className="max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+        <aside
+          className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
+          onWheel={(event) => event.stopPropagation()}
+        >
           <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
           <p className="mt-2">{projectInfo.what}</p>
           <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
@@ -625,7 +659,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       position={{ x: window.x, y: window.y }}
       onStop={handleDragStop}
     >
-      <div ref={nodeRef} data-ascii-blocker="true" style={{ position: 'absolute', zIndex: window.zIndex }}>
+      <div
+        ref={nodeRef}
+        data-ascii-blocker="true"
+        style={{ position: 'absolute', zIndex: window.zIndex, width: window.width, height: window.height }}
+      >
         {windowContent}
         {renderProjectInfoPanel('outside')}
       </div>

@@ -187,6 +187,32 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* Project info panel custom scrollbar */
+.project-info-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #ba944f rgba(34, 27, 16, 0.6);
+}
+
+.project-info-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.project-info-scroll::-webkit-scrollbar-track {
+  background: rgba(36, 28, 17, 0.7);
+  border: 1px solid rgba(121, 94, 46, 0.45);
+  border-radius: 999px;
+}
+
+.project-info-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f1d58f 0%, #c69a54 100%);
+  border: 1px solid #8f6e37;
+  border-radius: 999px;
+}
+
+.project-info-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f6e0a2 0%, #d3ac67 100%);
+}
+
 /* Disable Next.js dev overlays */
 #__next-build-watcher,
 nextjs-portal,
