@@ -32,6 +32,8 @@ export default function DesktopShell() {
   // iOS Safari sometimes keeps a zoomed/shifted viewport after text-field focus in embedded apps.
   // Keep the parent desktop pinned to the top-left layout origin.
   useEffect(() => {
+    let keyboardLikelyOpen = false
+
     const snapViewport = () => {
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0) {
         globalThis.window?.scrollTo(0, 0)
@@ -50,28 +52,41 @@ export default function DesktopShell() {
         return
       }
       const isInputTarget =
-        target.tagName === 'IFRAME' ||
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
         target.isContentEditable
       if (!isInputTarget) {
         return
       }
-      scheduleSnap([0, 90, 220])
+      keyboardLikelyOpen = true
     }
 
     const handleFocusOut = () => {
-      scheduleSnap([60, 180, 360, 620])
+      const vv = globalThis.window?.visualViewport
+      const viewportDelta = vv ? globalThis.window.innerHeight - vv.height : 0
+      if (viewportDelta < 80) {
+        keyboardLikelyOpen = false
+        scheduleSnap([120, 260, 480])
+      }
     }
 
     const handleViewportShift = () => {
       const vv = globalThis.window?.visualViewport
       if (!vv) {
-        snapViewport()
         return
       }
-      if (vv.offsetTop !== 0 || vv.pageTop !== 0) {
-        scheduleSnap([0, 120])
+      const viewportDelta = globalThis.window.innerHeight - vv.height
+      const keyboardOpenNow = viewportDelta > 130
+
+      if (keyboardOpenNow) {
+        keyboardLikelyOpen = true
+        return
+      }
+
+      if (keyboardLikelyOpen) {
+        keyboardLikelyOpen = false
+        scheduleSnap([120, 260, 460])
       }
     }
 
@@ -79,18 +94,25 @@ export default function DesktopShell() {
       scheduleSnap([120, 360])
     }
 
+    const handleSubmitIntent = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') {
+        return
+      }
+      scheduleSnap([160, 320, 540])
+    }
+
     globalThis.window?.addEventListener('focusin', handleFocusIn, true)
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
+    globalThis.window?.addEventListener('keydown', handleSubmitIntent, true)
     globalThis.window?.addEventListener('orientationchange', handleOrientationChange)
-    globalThis.window?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.visualViewport?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.visualViewport?.addEventListener('scroll', handleViewportShift, { passive: true })
 
     return () => {
       globalThis.window?.removeEventListener('focusin', handleFocusIn, true)
       globalThis.window?.removeEventListener('focusout', handleFocusOut, true)
+      globalThis.window?.removeEventListener('keydown', handleSubmitIntent, true)
       globalThis.window?.removeEventListener('orientationchange', handleOrientationChange)
-      globalThis.window?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.visualViewport?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.visualViewport?.removeEventListener('scroll', handleViewportShift)
     }

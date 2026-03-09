@@ -324,6 +324,18 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       panelMaxWidth,
       Math.max(panelMinWidth, placeOnRight ? rightCapacity : leftCapacity)
     )
+    const rawGlobalLeft = placeOnRight
+      ? window.x + window.width + panelGap
+      : window.x - panelGap - outsideWidth
+    const clampedGlobalLeft = Math.max(
+      edgePadding,
+      Math.min(
+        rawGlobalLeft,
+        Math.max(edgePadding, viewportWidthResolved - outsideWidth - edgePadding)
+      )
+    )
+    const panelLocalLeft = clampedGlobalLeft - window.x
+    const connectorFromRightSide = clampedGlobalLeft >= window.x + window.width
 
     if (shouldUseInsideFallback && placement === 'inside') {
       return (
@@ -348,15 +360,11 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     return (
       <div
         className="absolute top-[56px] z-[65] hidden md:block pointer-events-auto"
-        style={
-          placeOnRight
-            ? { left: `${window.width + panelGap}px`, width: `${outsideWidth}px` }
-            : { right: `${window.width + panelGap}px`, width: `${outsideWidth}px` }
-        }
+        style={{ left: `${panelLocalLeft}px`, width: `${outsideWidth}px` }}
       >
         <div
-          className={`pointer-events-none absolute top-6 h-[72px] w-[108px] ${placeOnRight ? '-left-[108px]' : '-right-[108px]'}`}
-          style={placeOnRight ? undefined : { transform: 'scaleX(-1)' }}
+          className={`pointer-events-none absolute top-6 h-[72px] w-[108px] ${connectorFromRightSide ? '-left-[108px]' : '-right-[108px]'}`}
+          style={connectorFromRightSide ? undefined : { transform: 'scaleX(-1)' }}
         >
           <span className="absolute left-0 top-[14px] h-[2px] w-[44px] bg-gradient-to-r from-[#e4c477] to-[#bb9043] opacity-90 animate-pulse" />
           <span

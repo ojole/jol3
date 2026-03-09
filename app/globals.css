@@ -191,10 +191,12 @@ body {
 .project-info-scroll {
   scrollbar-width: thin;
   scrollbar-color: #ba944f rgba(34, 27, 16, 0.6);
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .project-info-scroll::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .project-info-scroll::-webkit-scrollbar-track {
