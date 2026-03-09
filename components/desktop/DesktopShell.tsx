@@ -33,6 +33,10 @@ export default function DesktopShell() {
   // Keep the parent desktop pinned to the top-left layout origin.
   useEffect(() => {
     let keyboardLikelyOpen = false
+    let rafId: number | null = null
+    let scheduledTimers: number[] = []
+    let stableViewportHeight =
+      globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
 
     const snapViewport = () => {
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0) {
@@ -41,77 +45,120 @@ export default function DesktopShell() {
     }
 
     const scheduleSnap = (delays: number[]) => {
+      scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
+      scheduledTimers = []
       delays.forEach((delay) => {
-        globalThis.window?.setTimeout(snapViewport, delay)
+        const timerId = globalThis.window?.setTimeout(() => {
+          if (!keyboardLikelyOpen) {
+            snapViewport()
+          }
+        }, delay)
+        if (typeof timerId === 'number') {
+          scheduledTimers.push(timerId)
+        }
       })
     }
 
-    const handleFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement | null
-      if (!target) {
+    const isEditableElement = (node: Element | null) => {
+      if (!(node instanceof HTMLElement)) {
+        return false
+      }
+      return (
+        node.tagName === 'INPUT' ||
+        node.tagName === 'TEXTAREA' ||
+        node.tagName === 'SELECT' ||
+        node.isContentEditable
+      )
+    }
+
+    const readKeyboardState = () => {
+      const vv = globalThis.window?.visualViewport
+      if (!vv) {
+        return { open: keyboardLikelyOpen, justClosed: false }
+      }
+      if (vv.height > stableViewportHeight) {
+        stableViewportHeight = vv.height
+      }
+      const heightDelta = stableViewportHeight - vv.height
+      const open = heightDelta > 110 || vv.offsetTop > 40
+      const justClosed = keyboardLikelyOpen && !open
+      keyboardLikelyOpen = open
+      return { open, justClosed }
+    }
+
+    const handleViewportShift = () => {
+      if (rafId !== null) {
         return
       }
-      const isInputTarget =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
-      if (!isInputTarget) {
+      rafId = globalThis.window?.requestAnimationFrame(() => {
+        rafId = null
+        const { justClosed } = readKeyboardState()
+        if (justClosed) {
+          scheduleSnap([90, 200, 360, 560])
+        }
+      }) ?? null
+    }
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!isEditableElement(event.target as Element | null)) {
         return
       }
       keyboardLikelyOpen = true
     }
 
     const handleFocusOut = () => {
-      const vv = globalThis.window?.visualViewport
-      const viewportDelta = vv ? globalThis.window.innerHeight - vv.height : 0
-      if (viewportDelta < 80) {
-        keyboardLikelyOpen = false
-        scheduleSnap([120, 260, 480])
-      }
-    }
-
-    const handleViewportShift = () => {
-      const vv = globalThis.window?.visualViewport
-      if (!vv) {
-        return
-      }
-      const viewportDelta = globalThis.window.innerHeight - vv.height
-      const keyboardOpenNow = viewportDelta > 130
-
-      if (keyboardOpenNow) {
-        keyboardLikelyOpen = true
-        return
-      }
-
-      if (keyboardLikelyOpen) {
-        keyboardLikelyOpen = false
-        scheduleSnap([120, 260, 460])
-      }
-    }
-
-    const handleOrientationChange = () => {
-      scheduleSnap([120, 360])
+      globalThis.window?.setTimeout(() => {
+        if (isEditableElement(globalThis.document?.activeElement || null)) {
+          return
+        }
+        const { open } = readKeyboardState()
+        if (!open) {
+          scheduleSnap([90, 190, 340, 540])
+        }
+      }, 120)
     }
 
     const handleSubmitIntent = (event: KeyboardEvent) => {
       if (event.key !== 'Enter') {
         return
       }
-      scheduleSnap([160, 320, 540])
+      if (!isEditableElement(event.target as Element | null)) {
+        return
+      }
+      scheduleSnap([120, 220, 380, 580])
+    }
+
+    const handleFormSubmit = () => {
+      scheduleSnap([120, 220, 380, 580])
+    }
+
+    const handleOrientationChange = () => {
+      stableViewportHeight =
+        globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || stableViewportHeight
+      keyboardLikelyOpen = false
+      scheduleSnap([140, 320, 540])
     }
 
     globalThis.window?.addEventListener('focusin', handleFocusIn, true)
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
     globalThis.window?.addEventListener('keydown', handleSubmitIntent, true)
+    globalThis.window?.addEventListener('submit', handleFormSubmit, true)
+    globalThis.window?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.addEventListener('orientationchange', handleOrientationChange)
     globalThis.window?.visualViewport?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.visualViewport?.addEventListener('scroll', handleViewportShift, { passive: true })
+    handleViewportShift()
 
     return () => {
+      if (rafId !== null) {
+        globalThis.window?.cancelAnimationFrame(rafId)
+      }
+      scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
       globalThis.window?.removeEventListener('focusin', handleFocusIn, true)
       globalThis.window?.removeEventListener('focusout', handleFocusOut, true)
       globalThis.window?.removeEventListener('keydown', handleSubmitIntent, true)
+      globalThis.window?.removeEventListener('submit', handleFormSubmit, true)
+      globalThis.window?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.removeEventListener('orientationchange', handleOrientationChange)
       globalThis.window?.visualViewport?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.visualViewport?.removeEventListener('scroll', handleViewportShift)

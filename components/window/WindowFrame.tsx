@@ -311,31 +311,52 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     const panelGap = 24
     const panelMinWidth = 236
     const edgePadding = 12
+    const overlapGap = 10
     const viewportWidthResolved = viewportWidth || globalThis.window?.innerWidth || 0
-    const rightSpace = Math.max(0, viewportWidthResolved - (window.x + window.width))
-    const leftSpace = Math.max(0, window.x)
-    const rightCapacity = Math.max(0, rightSpace - panelGap - edgePadding)
-    const leftCapacity = Math.max(0, leftSpace - panelGap - edgePadding)
-    const canFitRight = rightCapacity >= panelMinWidth
-    const canFitLeft = leftCapacity >= panelMinWidth
-    const placeOnRight = canFitRight && (!canFitLeft || rightCapacity >= leftCapacity)
-    const shouldUseInsideFallback = !canFitRight && !canFitLeft
-    const outsideWidth = Math.min(
-      panelMaxWidth,
-      Math.max(panelMinWidth, placeOnRight ? rightCapacity : leftCapacity)
-    )
-    const rawGlobalLeft = placeOnRight
-      ? window.x + window.width + panelGap
-      : window.x - panelGap - outsideWidth
-    const clampedGlobalLeft = Math.max(
-      edgePadding,
-      Math.min(
-        rawGlobalLeft,
-        Math.max(edgePadding, viewportWidthResolved - outsideWidth - edgePadding)
+    const windowLeft = window.x
+    const windowRight = window.x + window.width
+    const leftCapacity = Math.max(0, windowLeft - panelGap - edgePadding)
+    const rightCapacity = Math.max(0, viewportWidthResolved - windowRight - panelGap - edgePadding)
+
+    type PlacementCandidate = {
+      side: 'left' | 'right'
+      width: number
+      localLeft: number
+      nonOverlapping: boolean
+      score: number
+    }
+
+    const buildCandidate = (side: 'left' | 'right'): PlacementCandidate | null => {
+      const capacity = side === 'right' ? rightCapacity : leftCapacity
+      if (capacity < panelMinWidth) {
+        return null
+      }
+      const width = Math.min(panelMaxWidth, capacity)
+      const rawGlobalLeft = side === 'right' ? windowRight + panelGap : windowLeft - panelGap - width
+      const clampedGlobalLeft = Math.max(
+        edgePadding,
+        Math.min(rawGlobalLeft, Math.max(edgePadding, viewportWidthResolved - width - edgePadding))
       )
-    )
-    const panelLocalLeft = clampedGlobalLeft - window.x
-    const connectorFromRightSide = clampedGlobalLeft >= window.x + window.width
+      const clampedGlobalRight = clampedGlobalLeft + width
+      const nonOverlapping =
+        clampedGlobalRight <= windowLeft - overlapGap || clampedGlobalLeft >= windowRight + overlapGap
+      return {
+        side,
+        width,
+        localLeft: clampedGlobalLeft - window.x,
+        nonOverlapping,
+        score: capacity + (nonOverlapping ? 10000 : 0),
+      }
+    }
+
+    const candidates = [buildCandidate('right'), buildCandidate('left')]
+      .filter((candidate): candidate is PlacementCandidate => Boolean(candidate))
+      .sort((a, b) => b.score - a.score)
+    const preferredPlacement = candidates[0] || null
+    const shouldUseInsideFallback = !preferredPlacement || !preferredPlacement.nonOverlapping
+    const outsideWidth = preferredPlacement?.width || panelMinWidth
+    const panelLocalLeft = preferredPlacement?.localLeft || 0
+    const connectorFromRightSide = preferredPlacement?.side === 'right'
 
     if (shouldUseInsideFallback && placement === 'inside') {
       return (
@@ -359,8 +380,8 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
 
     return (
       <div
-        className="absolute top-[56px] z-[65] hidden md:block pointer-events-auto"
-        style={{ left: `${panelLocalLeft}px`, width: `${outsideWidth}px` }}
+        className="absolute top-[56px] hidden md:block pointer-events-auto"
+        style={{ left: `${panelLocalLeft}px`, width: `${outsideWidth}px`, zIndex: window.zIndex + 4 }}
       >
         <div
           className={`pointer-events-none absolute top-6 h-[72px] w-[108px] ${connectorFromRightSide ? '-left-[108px]' : '-right-[108px]'}`}
@@ -380,6 +401,8 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
         <aside
           className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
           onWheel={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          style={{ touchAction: 'pan-y' }}
         >
           <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
           <p className="mt-2">{projectInfo.what}</p>
