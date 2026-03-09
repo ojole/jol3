@@ -22,6 +22,25 @@ const titleBarControlNeutralClass =
   `${titleBarControlBaseClass} bg-[#4a4a4a] hover:bg-[#5a5a5a] active:bg-[#6a6a6a] border-[2px] border-t-[#6a6a6a] border-l-[#6a6a6a] border-b-[#2a2a2a] border-r-[#2a2a2a] text-white`
 const titleBarControlCloseClass =
   `${titleBarControlBaseClass} bg-[#8a4a4a] hover:bg-[#9a5a5a] active:bg-[#aa6a6a] border-[2px] border-t-[#aa6a6a] border-l-[#aa6a6a] border-b-[#6a2a2a] border-r-[#6a2a2a] text-white`
+const projectInfoWindowTypeSet = new Set(['emcrypted', 'faiv'])
+const projectInfoMap = {
+  emcrypted: {
+    title: 'EMCRYPTED.COM',
+    what: 'emcrypted.com is an emoji-first movie puzzle app. The game parses puzzle rows from a compiled movie library, maps each symbol to Fluent assets, and tracks hint and guess state from active play through the final breakdown screen.',
+    technical:
+      'Stack: React, responsive layout logic for direct and embedded windows, emoji asset mapping, and structured game-state transitions for home, game, decrypted, and game-over flows.',
+    inspiration:
+      'This started as a prompt experiment I played with friends and family. The trivia format felt novel right away, so I built it into a full app. It was my first project and it proved to me that I can build what I imagine if I stay focused.',
+  },
+  faiv: {
+    title: 'FAIV.AI',
+    what: 'faiv.ai is a council deliberation console where five perspectives debate before producing a final response. Each prompt runs through the same framework so users can inspect the reasoning and reply directly to individual council members.',
+    technical:
+      'Stack: FastAPI backend with session handling, deliberation parsing, secure embed token flow for jol3 access, and a retro React console client with threaded re-deliberation interactions.',
+    inspiration:
+      "My dad taught me that life works best when you keep balance across every lane, not just one. I built FAIV as a framework around that philosophy so people can work through decisions with a more grounded and balanced output.",
+  },
+} as const
 
 export default function WindowFrame({ window, children }: WindowFrameProps) {
   const { closeWindow, focusWindow, toggleMaximize, minimizeWindow, updateWindowPosition, updateWindowSize } = useWindowStore()
@@ -34,7 +53,10 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     startWidth: number
     startHeight: number
   } | null>(null)
+  const hasAutoOpenedInfoRef = useRef(false)
   const [stickyResizing, setStickyResizing] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
 
   // Focus on mount
   useEffect(() => {
@@ -43,16 +65,24 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     }
   }, [])
 
+  useEffect(() => {
+    const media = globalThis.window?.matchMedia('(max-width: 767px)')
+    if (!media) {
+      return
+    }
+
+    const syncViewport = () => setIsMobileViewport(media.matches)
+    syncViewport()
+    media.addEventListener('change', syncViewport)
+    return () => media.removeEventListener('change', syncViewport)
+  }, [])
+
   const handleMouseDown = () => {
     focusWindow(window.id)
   }
 
   const handleDragStop = (_e: any, data: any) => {
     updateWindowPosition(window.id, data.x, data.y)
-  }
-
-  if (window.isMinimized) {
-    return null
   }
 
   // Get icon path based on window type
@@ -84,7 +114,24 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       }
 
   const isStickyNote = window.windowType === 'contact'
+  const supportsInfoPanel = projectInfoWindowTypeSet.has(window.windowType)
+  const projectInfo =
+    window.windowType === 'emcrypted' || window.windowType === 'faiv'
+      ? projectInfoMap[window.windowType]
+      : null
   const showOpenInNewTab = projectWindowTypeSet.has(window.windowType)
+
+  useEffect(() => {
+    if (!supportsInfoPanel || isMobileViewport || hasAutoOpenedInfoRef.current) {
+      return
+    }
+    setShowInfoPanel(true)
+    hasAutoOpenedInfoRef.current = true
+  }, [supportsInfoPanel, isMobileViewport])
+
+  if (window.isMinimized) {
+    return null
+  }
 
   const openFaivInNewTab = async () => {
     const newTab = globalThis.window?.open('about:blank', '_blank')
@@ -176,6 +223,105 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     } catch {
       // no-op
     }
+  }
+
+  const handleToggleInfoPanel = (event?: React.SyntheticEvent) => {
+    event?.stopPropagation()
+    setShowInfoPanel((previous) => !previous)
+    hasAutoOpenedInfoRef.current = true
+  }
+
+  const handleCloseInfoPanel = (event?: React.SyntheticEvent) => {
+    event?.stopPropagation()
+    setShowInfoPanel(false)
+    hasAutoOpenedInfoRef.current = true
+  }
+
+  const renderProjectInfoPanel = (placement: 'inside' | 'outside') => {
+    if (!projectInfo || !showInfoPanel) {
+      return null
+    }
+
+    if (isMobileViewport) {
+      if (placement !== 'inside') {
+        return null
+      }
+      return (
+        <div className="absolute inset-0 z-[70] bg-[rgba(8,10,14,0.95)] text-[#efe6c5] backdrop-blur-[1px]">
+          <div className="h-full overflow-y-auto p-4">
+            <div className="rounded-md border border-[#7d6736] bg-[rgba(22,18,10,0.9)] shadow-[0_0_0_1px_rgba(255,220,130,0.15)]">
+              <div className="flex items-center justify-between border-b border-[#6a5427] px-3 py-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#f8df8c]">Project Info</p>
+                <button
+                  className="h-7 w-7 rounded-sm border border-[#7c6431] bg-[rgba(44,33,14,0.85)] text-[#f0d78a]"
+                  aria-label="Close project info"
+                  onClick={handleCloseInfoPanel}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-4 px-4 py-4 font-mono text-[12px] leading-6 text-[#f6eecf]">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">What It Is</p>
+                  <p className="mt-1">{projectInfo.what}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">Technical View</p>
+                  <p className="mt-1">{projectInfo.technical}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">Inspiration</p>
+                  <p className="mt-1">{projectInfo.inspiration}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (window.isMaximized) {
+      if (placement !== 'inside') {
+        return null
+      }
+      return (
+        <div className="absolute right-5 top-[66px] z-[65] w-[340px] max-w-[44vw]">
+          <div className="rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
+            <p className="mt-2">{projectInfo.what}</p>
+            <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
+            <p className="mt-2 text-[#f0dfac]">{projectInfo.inspiration}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (placement !== 'outside') {
+      return null
+    }
+
+    return (
+      <div className="absolute left-[calc(100%+20px)] top-[56px] z-[65] hidden w-[340px] md:block">
+        <div className="pointer-events-none absolute -left-[96px] top-6 h-[72px] w-[96px]">
+          <span className="absolute left-0 top-[12px] h-[2px] w-[40px] bg-[#d8b361] opacity-80 animate-pulse" />
+          <span
+            className="absolute left-[34px] top-[12px] h-[2px] w-[26px] origin-left rotate-[28deg] bg-[#a98746] opacity-90 animate-pulse"
+            style={{ animationDelay: '120ms' }}
+          />
+          <span
+            className="absolute left-[56px] top-[25px] h-[2px] w-[40px] bg-[#d8b361] opacity-80 animate-pulse"
+            style={{ animationDelay: '260ms' }}
+          />
+          <span className="absolute left-[53px] top-[22px] h-[8px] w-[8px] rounded-full border border-[#cba457] bg-[#f7d986]" />
+        </div>
+        <aside className="rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
+          <p className="mt-2">{projectInfo.what}</p>
+          <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
+          <p className="mt-2 text-[#f0dfac]">{projectInfo.inspiration}</p>
+        </aside>
+      </div>
+    )
   }
 
   const windowContent = isStickyNote ? (
@@ -351,6 +497,23 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
             </button>
           ) : null}
 
+          {supportsInfoPanel ? (
+            <button
+              onClick={(event) => handleToggleInfoPanel(event)}
+              onTouchEnd={(event) => {
+                event.stopPropagation()
+                event.preventDefault()
+                handleToggleInfoPanel()
+              }}
+              className={titleBarControlNeutralClass}
+              style={{ touchAction: 'manipulation' }}
+              aria-label={showInfoPanel ? 'Hide app info' : 'Show app info'}
+              title={showInfoPanel ? 'Hide app info' : 'Show app info'}
+            >
+              <span className="text-xs md:text-[10px] leading-none pointer-events-none">i</span>
+            </button>
+          ) : null}
+
           {/* Minimize Button */}
           <button
             onClick={(e) => {
@@ -411,12 +574,17 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       <div className="flex-1 overflow-auto bg-white">
         {children}
       </div>
+      {renderProjectInfoPanel('inside')}
     </div>
   )
 
   // If maximized, don't make it draggable
   if (window.isMaximized) {
-    return windowContent
+    return (
+      <div style={{ position: 'absolute', inset: 0, zIndex: window.zIndex }}>
+        {windowContent}
+      </div>
+    )
   }
 
   // If not maximized, wrap in Draggable
@@ -433,6 +601,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     >
       <div ref={nodeRef} style={{ position: 'absolute', zIndex: window.zIndex }}>
         {windowContent}
+        {renderProjectInfoPanel('outside')}
       </div>
     </Draggable>
   )

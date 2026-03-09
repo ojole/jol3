@@ -2,11 +2,14 @@
 
 import { useEffect, useRef } from 'react'
 
-const CELL_SIZE = 12
+const DESKTOP_CELL_SIZE = 12
+const MOBILE_CELL_SIZE = 14
 const FLOW_TIME_SPEED = 0.00034
 const MIN_ACTIVE_SPEED = 0.008
 const INJECT_RADIUS_PX = 92
 const WAKE_RADIUS_PX = 132
+const MOBILE_INJECT_RADIUS_PX = 72
+const MOBILE_WAKE_RADIUS_PX = 108
 const TAU = Math.PI * 2
 const GLYPH_HEAD = '3'
 const GLYPH_WAKE = '>'
@@ -51,15 +54,14 @@ export default function AsciiFieldOverlay() {
       return
     }
 
-    const media = window.matchMedia('(min-width: 768px)')
-    if (!media.matches) {
-      return
-    }
-
     const context = canvas.getContext('2d')
     if (!context) {
       return
     }
+
+    const viewportMedia = window.matchMedia('(min-width: 768px)')
+    let isDesktopViewport = viewportMedia.matches
+    let cellSize = isDesktopViewport ? DESKTOP_CELL_SIZE : MOBILE_CELL_SIZE
 
     const pointer = {
       x: -9999,
@@ -68,6 +70,7 @@ export default function AsciiFieldOverlay() {
       vy: 0,
       speed: 0,
       active: false,
+      pointerId: null as number | null,
     }
     const smooth = { x: -9999, y: -9999 }
 
@@ -91,8 +94,8 @@ export default function AsciiFieldOverlay() {
       const rect = container.getBoundingClientRect()
       width = Math.max(1, Math.floor(rect.width))
       height = Math.max(1, Math.floor(rect.height))
-      cols = Math.ceil(width / CELL_SIZE)
-      rows = Math.ceil(height / CELL_SIZE)
+      cols = Math.ceil(width / cellSize)
+      rows = Math.ceil(height / cellSize)
       cellCount = cols * rows
       dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
 
@@ -116,10 +119,16 @@ export default function AsciiFieldOverlay() {
       context.setTransform(1, 0, 0, 1, 0, 0)
       context.scale(dpr, dpr)
       context.font =
-        '700 12px "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+        `700 ${Math.max(11, cellSize - 1)}px "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`
       context.globalCompositeOperation = 'source-over'
       context.textAlign = 'center'
       context.textBaseline = 'middle'
+    }
+
+    const syncViewportMode = () => {
+      isDesktopViewport = viewportMedia.matches
+      cellSize = isDesktopViewport ? DESKTOP_CELL_SIZE : MOBILE_CELL_SIZE
+      resize()
     }
 
     const updatePointer = (clientX: number, clientY: number) => {
@@ -143,15 +152,6 @@ export default function AsciiFieldOverlay() {
       pointer.active = true
     }
 
-    const handleMove = (event: PointerEvent) => {
-      updatePointer(event.clientX, event.clientY)
-    }
-
-    const handleLeave = () => {
-      pointer.active = false
-      pointer.speed = 0
-    }
-
     const injectPulse = (
       centerX: number,
       centerY: number,
@@ -164,9 +164,9 @@ export default function AsciiFieldOverlay() {
         return
       }
 
-      const cx = centerX / CELL_SIZE
-      const cy = centerY / CELL_SIZE
-      const radius = Math.max(1.2, radiusPx / CELL_SIZE)
+      const cx = centerX / cellSize
+      const cy = centerY / cellSize
+      const radius = Math.max(1.2, radiusPx / cellSize)
       const radiusSq = radius * radius
       const minX = Math.max(1, Math.floor(cx - radius))
       const maxX = Math.min(cols - 2, Math.ceil(cx + radius))
@@ -192,6 +192,51 @@ export default function AsciiFieldOverlay() {
           velYA[index] += normY * falloff * strength * 0.84
         }
       }
+    }
+
+    const emitInteractionPulse = () => {
+      if (!pointer.active) {
+        return
+      }
+      const injectRadius = isDesktopViewport ? INJECT_RADIUS_PX : MOBILE_INJECT_RADIUS_PX
+      injectPulse(pointer.x, pointer.y, injectRadius, pointer.vx, pointer.vy, 0.42)
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      pointer.pointerId = event.pointerId
+      updatePointer(event.clientX, event.clientY)
+      emitInteractionPulse()
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' && pointer.pointerId !== event.pointerId) {
+        return
+      }
+      updatePointer(event.clientX, event.clientY)
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (pointer.pointerId !== null && pointer.pointerId !== event.pointerId) {
+        return
+      }
+      pointer.pointerId = null
+      pointer.active = false
+      pointer.speed = 0
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      pointer.active = false
+      pointer.speed = 0
+      pointer.pointerId = null
+    }
+
+    const handleBlur = () => {
+      pointer.active = false
+      pointer.speed = 0
+      pointer.pointerId = null
     }
 
     const stepField = (time: number, dt: number) => {
@@ -234,8 +279,8 @@ export default function AsciiFieldOverlay() {
           const lapVX = (velXA[left] + velXA[right] + velXA[up] + velXA[down]) * 0.25 - vx
           const lapVY = (velYA[left] + velYA[right] + velYA[up] + velYA[down]) * 0.25 - vy
 
-          velXB[index] = (advectedVX + lapVX * 0.24 * dt + globalX * 0.03) * 0.912
-          velYB[index] = (advectedVY + lapVY * 0.24 * dt + globalY * 0.03) * 0.912
+          velXB[index] = (advectedVX + lapVX * 0.24 * dt) * 0.912
+          velYB[index] = (advectedVY + lapVY * 0.24 * dt) * 0.912
         }
       }
 
@@ -284,11 +329,13 @@ export default function AsciiFieldOverlay() {
       pointer.speed *= 0.95
 
       if (pointer.active && pointer.speed > MIN_ACTIVE_SPEED) {
+        const injectRadius = isDesktopViewport ? INJECT_RADIUS_PX : MOBILE_INJECT_RADIUS_PX
+        const wakeRadius = isDesktopViewport ? WAKE_RADIUS_PX : MOBILE_WAKE_RADIUS_PX
         const energyBoost = 0.26 + pointer.speed * 1.15
         injectPulse(
           smooth.x,
           smooth.y,
-          INJECT_RADIUS_PX,
+          injectRadius,
           pointer.vx,
           pointer.vy,
           energyBoost
@@ -296,7 +343,7 @@ export default function AsciiFieldOverlay() {
         injectPulse(
           smooth.x - pointer.vx * 5.8,
           smooth.y - pointer.vy * 5.8,
-          WAKE_RADIUS_PX,
+          wakeRadius,
           pointer.vx,
           pointer.vy,
           energyBoost * 0.46
@@ -308,27 +355,30 @@ export default function AsciiFieldOverlay() {
       context.clearRect(0, 0, width, height)
 
       for (let row = 0; row < rows; row += 1) {
-        const y = row * CELL_SIZE + CELL_SIZE * 0.52
+        const y = row * cellSize + cellSize * 0.52
         for (let col = 0; col < cols; col += 1) {
-          const x = col * CELL_SIZE + CELL_SIZE * 0.5
+          const x = col * cellSize + cellSize * 0.5
           const index = row * cols + col
           const pulse = energyA[index]
           const velocityMag = Math.hypot(velXA[index], velYA[index])
           const shimmer =
             Math.sin((col * 0.23 + row * 0.17) + time * FLOW_TIME_SPEED * 10.8) * 0.5 + 0.5
-          const ambient = 0.16 + shimmer * 0.15
-          const signal = ambient + pulse * 0.92 + velocityMag * 0.24
+          const signal = pulse * 1.08 + velocityMag * 0.22
+
+          if (signal <= 0.055) {
+            continue
+          }
 
           let glyph = GLYPH_IDLE
-          if (signal > 1.02) {
+          if (signal > 0.78) {
             glyph = GLYPH_HEAD
-          } else if (signal > 0.53) {
+          } else if (signal > 0.3) {
             glyph = GLYPH_WAKE
           }
 
-          const glyphBoost = glyph === GLYPH_HEAD ? 0.18 : glyph === GLYPH_WAKE ? 0.09 : 0
-          const alpha = clamp01(0.05 + ambient * 0.32 + pulse * 0.42 + velocityMag * 0.11 + glyphBoost)
-          if (alpha < 0.06) {
+          const alphaBase = glyph === GLYPH_HEAD ? 0.3 : glyph === GLYPH_WAKE ? 0.22 : 0.14
+          const alpha = clamp01(alphaBase + signal * 0.56 + shimmer * 0.07)
+          if (alpha < 0.08) {
             continue
           }
 
@@ -345,18 +395,26 @@ export default function AsciiFieldOverlay() {
 
     const observer = new ResizeObserver(() => resize())
     observer.observe(container)
+    container.addEventListener('pointerdown', handlePointerDown, { passive: true })
+    container.addEventListener('pointermove', handlePointerMove, { passive: true })
+    container.addEventListener('pointerup', handlePointerUp, { passive: true })
+    container.addEventListener('pointercancel', handlePointerUp, { passive: true })
+    container.addEventListener('pointerleave', handlePointerLeave, { passive: true })
     window.addEventListener('resize', resize)
-    window.addEventListener('pointermove', handleMove, { passive: true })
-    window.addEventListener('mouseleave', handleLeave, { passive: true })
-    window.addEventListener('blur', handleLeave, { passive: true })
+    window.addEventListener('blur', handleBlur, { passive: true })
+    viewportMedia.addEventListener('change', syncViewportMode)
 
     return () => {
       running = false
       observer.disconnect()
+      container.removeEventListener('pointerdown', handlePointerDown)
+      container.removeEventListener('pointermove', handlePointerMove)
+      container.removeEventListener('pointerup', handlePointerUp)
+      container.removeEventListener('pointercancel', handlePointerUp)
+      container.removeEventListener('pointerleave', handlePointerLeave)
       window.removeEventListener('resize', resize)
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('mouseleave', handleLeave)
-      window.removeEventListener('blur', handleLeave)
+      window.removeEventListener('blur', handleBlur)
+      viewportMedia.removeEventListener('change', syncViewportMode)
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current)
       }
@@ -364,12 +422,17 @@ export default function AsciiFieldOverlay() {
   }, [])
 
   return (
-    <div ref={containerRef} className="pointer-events-none absolute inset-0 z-[1] hidden md:block overflow-hidden">
+    <div
+      ref={containerRef}
+      className="absolute inset-0 z-[1] overflow-hidden"
+      style={{ touchAction: 'none' }}
+      data-wallpaper-interactive="true"
+    >
       <canvas
         ref={canvasRef}
         aria-hidden="true"
         data-ascii-overlay-state="running"
-        className="pointer-events-none absolute inset-0"
+        className="absolute inset-0"
         style={{
           opacity: 0.8,
         }}
