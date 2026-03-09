@@ -40,14 +40,34 @@ export default function DesktopShell() {
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
 
+    const readSafeTopInset = () => {
+      const computed = globalThis.window?.getComputedStyle(globalThis.document.documentElement)
+      const raw = computed?.getPropertyValue('--safe-top')?.trim() || ''
+      const parsed = Number.parseFloat(raw)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    const isTopBarMisaligned = () => {
+      const topBar = globalThis.document?.getElementById('desktop-top-bar')
+      if (!topBar) {
+        return false
+      }
+      const rect = topBar.getBoundingClientRect()
+      const safeTopInset = readSafeTopInset()
+      const expectedTop = safeTopInset > 0 ? Math.max(8, safeTopInset - 2) : 0
+      return rect.top < expectedTop
+    }
+
     const snapViewport = (soft = false) => {
-      const activeElement = globalThis.document?.activeElement
-      if (
-        activeElement instanceof HTMLIFrameElement ||
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement
-      ) {
-        activeElement.blur()
+      if (!soft) {
+        const activeElement = globalThis.document?.activeElement
+        if (
+          activeElement instanceof HTMLIFrameElement ||
+          activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement
+        ) {
+          activeElement.blur()
+        }
       }
       globalThis.document?.getElementById('desktop-top-bar')?.scrollIntoView({ block: 'start' })
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0 || !soft) {
@@ -70,7 +90,7 @@ export default function DesktopShell() {
       const tick = () => {
         const frameNow = globalThis.performance?.now() || Date.now()
         const { open } = readKeyboardState()
-        if (!open) {
+        if (!open && ((globalThis.window?.scrollY || 0) > 0 || isTopBarMisaligned())) {
           snapViewport(true)
         }
         if (frameNow < settleUntil) {
@@ -96,7 +116,7 @@ export default function DesktopShell() {
         }
       })
       const longestDelay = delays.length ? Math.max(...delays) : 0
-      startSettleLoop(longestDelay + 720)
+      startSettleLoop(longestDelay + 1600)
     }
 
     const isEditableElement = (node: Element | null) => {
@@ -116,11 +136,13 @@ export default function DesktopShell() {
       if (!vv) {
         return { open: keyboardLikelyOpen, justClosed: false }
       }
-      if (vv.height > stableViewportHeight) {
-        stableViewportHeight = vv.height
+      const expandedHeight = vv.height + vv.offsetTop
+      if (!keyboardLikelyOpen && expandedHeight > stableViewportHeight) {
+        stableViewportHeight = expandedHeight
       }
-      const heightDelta = stableViewportHeight - vv.height
-      const open = heightDelta > 110 || vv.offsetTop > 40
+      const baseline = Math.max(1, stableViewportHeight)
+      const heightRatio = vv.height / baseline
+      const open = heightRatio < 0.84 || vv.offsetTop > 80
       const justClosed = keyboardLikelyOpen && !open
       keyboardLikelyOpen = open
       return { open, justClosed }
@@ -181,7 +203,8 @@ export default function DesktopShell() {
       const { justClosed } = readKeyboardState()
       if (justClosed) {
         scheduleSnap([90, 200, 360, 560])
-      } else if (!keyboardLikelyOpen && (globalThis.window?.scrollY || 0) > 0) {
+      } else if (!keyboardLikelyOpen && ((globalThis.window?.scrollY || 0) > 0 || isTopBarMisaligned())) {
+        startSettleLoop(520)
         snapViewport(true)
       }
     }
