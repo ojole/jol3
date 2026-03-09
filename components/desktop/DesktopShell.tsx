@@ -84,6 +84,16 @@ export default function DesktopShell() {
       return (globalThis.window?.scrollY || 0) > 0 || hasViewportDrift() || hasTopBarDrift()
     }
 
+    const isKeyboardViewportCompressed = () => {
+      const vv = globalThis.window?.visualViewport
+      if (!vv) {
+        return false
+      }
+      const baseline = Math.max(1, stableViewportHeight)
+      const delta = baseline - vv.height
+      return delta > 42 || vv.offsetTop > 8
+    }
+
     const startSettleLoop = (durationMs: number) => {
       const now = globalThis.performance?.now() || Date.now()
       settleUntil = Math.max(settleUntil, now + durationMs)
@@ -110,7 +120,7 @@ export default function DesktopShell() {
       snapViewport(true)
       delays.forEach((delay) => {
         const timerId = globalThis.window?.setTimeout(() => {
-          if (!keyboardLikelyOpen) {
+          if (!keyboardLikelyOpen && !isKeyboardViewportCompressed()) {
             snapViewport(true)
           }
         }, delay)
@@ -144,8 +154,8 @@ export default function DesktopShell() {
         stableViewportHeight = expandedHeight
       }
       const baseline = Math.max(1, stableViewportHeight)
-      const heightRatio = vv.height / baseline
-      const open = heightRatio < 0.84 || vv.offsetTop > 80
+      const delta = baseline - vv.height
+      const open = delta > 110 || vv.offsetTop > 80
       const justClosed = keyboardLikelyOpen && !open
       keyboardLikelyOpen = open
       return { open, justClosed }
