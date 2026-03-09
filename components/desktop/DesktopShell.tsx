@@ -40,45 +40,38 @@ export default function DesktopShell() {
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
 
-    const readSafeTopInset = () => {
-      const computed = globalThis.window?.getComputedStyle(globalThis.document.documentElement)
-      const raw = computed?.getPropertyValue('--safe-top')?.trim() || ''
-      const parsed = Number.parseFloat(raw)
-      return Number.isFinite(parsed) ? parsed : 0
-    }
-
-    const isTopBarMisaligned = () => {
-      const topBar = globalThis.document?.getElementById('desktop-top-bar')
-      if (!topBar) {
-        return false
-      }
-      const rect = topBar.getBoundingClientRect()
-      const safeTopInset = readSafeTopInset()
-      const expectedTop = safeTopInset > 0 ? Math.max(8, safeTopInset - 2) : 0
-      return rect.top < expectedTop
-    }
-
     const snapViewport = (soft = false) => {
-      if (!soft) {
-        const activeElement = globalThis.document?.activeElement
-        if (
-          activeElement instanceof HTMLIFrameElement ||
-          activeElement instanceof HTMLInputElement ||
-          activeElement instanceof HTMLTextAreaElement
-        ) {
-          activeElement.blur()
-        }
-      }
-      globalThis.document?.getElementById('desktop-top-bar')?.scrollIntoView({ block: 'start' })
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0 || !soft) {
         globalThis.window?.scrollTo(0, 0)
       }
+      globalThis.window?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      globalThis.document?.scrollingElement?.scrollTo(0, 0)
       if (globalThis.document?.documentElement) {
         globalThis.document.documentElement.scrollTop = 0
       }
       if (globalThis.document?.body) {
         globalThis.document.body.scrollTop = 0
       }
+    }
+
+    const hasTopBarDrift = () => {
+      const topBar = globalThis.document?.getElementById('desktop-top-bar')
+      if (!topBar) {
+        return false
+      }
+      return topBar.getBoundingClientRect().top < -0.5
+    }
+
+    const hasViewportDrift = () => {
+      const vv = globalThis.window?.visualViewport
+      if (!vv) {
+        return false
+      }
+      return Math.abs(vv.scale - 1) > 0.001 || vv.offsetTop > 0.5 || vv.pageTop > 0.5
+    }
+
+    const hasDesktopDrift = () => {
+      return (globalThis.window?.scrollY || 0) > 0 || hasViewportDrift() || hasTopBarDrift()
     }
 
     const startSettleLoop = (durationMs: number) => {
@@ -90,7 +83,7 @@ export default function DesktopShell() {
       const tick = () => {
         const frameNow = globalThis.performance?.now() || Date.now()
         const { open } = readKeyboardState()
-        if (!open && ((globalThis.window?.scrollY || 0) > 0 || isTopBarMisaligned())) {
+        if (!open && hasDesktopDrift()) {
           snapViewport(true)
         }
         if (frameNow < settleUntil) {
@@ -105,10 +98,11 @@ export default function DesktopShell() {
     const scheduleSnap = (delays: number[]) => {
       scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
       scheduledTimers = []
+      snapViewport(true)
       delays.forEach((delay) => {
         const timerId = globalThis.window?.setTimeout(() => {
           if (!keyboardLikelyOpen) {
-            snapViewport()
+            snapViewport(true)
           }
         }, delay)
         if (typeof timerId === 'number') {
@@ -157,6 +151,11 @@ export default function DesktopShell() {
         const { justClosed } = readKeyboardState()
         if (justClosed) {
           scheduleSnap([90, 200, 360, 560])
+          return
+        }
+        if (!keyboardLikelyOpen && hasDesktopDrift()) {
+          startSettleLoop(520)
+          snapViewport(true)
         }
       }) ?? null
     }
@@ -203,7 +202,7 @@ export default function DesktopShell() {
       const { justClosed } = readKeyboardState()
       if (justClosed) {
         scheduleSnap([90, 200, 360, 560])
-      } else if (!keyboardLikelyOpen && ((globalThis.window?.scrollY || 0) > 0 || isTopBarMisaligned())) {
+      } else if (!keyboardLikelyOpen && hasDesktopDrift()) {
         startSettleLoop(520)
         snapViewport(true)
       }
@@ -222,6 +221,7 @@ export default function DesktopShell() {
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
     globalThis.window?.addEventListener('keydown', handleSubmitIntent, true)
     globalThis.window?.addEventListener('submit', handleFormSubmit, true)
+    globalThis.window?.addEventListener('scroll', handleViewportShift, { passive: true })
     globalThis.window?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.addEventListener('orientationchange', handleOrientationChange)
     globalThis.window?.visualViewport?.addEventListener('resize', handleViewportShift, { passive: true })
@@ -243,6 +243,7 @@ export default function DesktopShell() {
       globalThis.window?.removeEventListener('focusout', handleFocusOut, true)
       globalThis.window?.removeEventListener('keydown', handleSubmitIntent, true)
       globalThis.window?.removeEventListener('submit', handleFormSubmit, true)
+      globalThis.window?.removeEventListener('scroll', handleViewportShift)
       globalThis.window?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.removeEventListener('orientationchange', handleOrientationChange)
       globalThis.window?.visualViewport?.removeEventListener('resize', handleViewportShift)
@@ -256,9 +257,12 @@ export default function DesktopShell() {
       <div
         className="w-full flex flex-col relative scanlines"
         style={{
+          position: 'fixed',
+          inset: 0,
           height: '100dvh',
           paddingTop: 'var(--safe-top)',
           background: 'linear-gradient(135deg, #d8cfd0 0%, #c9c0c1 50%, #bab1b2 100%)',
+          overflow: 'hidden',
         }}
       >
         {/* Top Bar */}
