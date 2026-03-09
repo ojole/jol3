@@ -5,9 +5,8 @@ export const resumeContent = {
   content: `JOLE BARRON
 Houston, TX
 jol3@jol3.com
-jol3.com
 
-────────────────────────────────────────────────────────────────
+-------
 
 PROFILE
 
@@ -20,7 +19,7 @@ Known for operating across technical and non-technical teams, improving
 customer-facing systems, and shipping AI-assisted tools in regulated
 environments.
 
-────────────────────────────────────────────────────────────────
+______
 
 HIGHLIGHTS
 
@@ -42,7 +41,7 @@ HIGHLIGHTS
 • Built and launched EMCRYPTED, an original puzzle/game concept, as a live
   MVP (product design + implementation).
 
-────────────────────────────────────────────────────────────────
+______
 
 EXPERIENCE
 
@@ -67,7 +66,7 @@ Small Business Consultant
 • Simplified complex technical topics into clear, actionable recommendations.
 • Consistently recognized for high performance and customer impact.
 
-────────────────────────────────────────────────────────────────
+______
 
 CORE CAPABILITIES
 
@@ -82,7 +81,7 @@ Customer Experience Systems
 Documentation & Knowledge Architecture
 Regulated Workflow Navigation (USPTO + multi-state operations)
 
-────────────────────────────────────────────────────────────────
+______
 
 SELECT PROJECTS
 
@@ -97,7 +96,7 @@ AI Knowledge Tooling
 Internal LLM-assisted support and operations tools focused on speed, consistency,
 and usability.
 
-────────────────────────────────────────────────────────────────
+______
 
 WORK STYLE
 
@@ -110,7 +109,7 @@ of using the product.
 export const aboutMeContent = {
   title: 'about-me.txt',
   content: `about-me.txt
-═══════════════════════════════════════════════════
+______
 
 I'm Jole.
 
@@ -143,7 +142,7 @@ I want to help build.
 My goal is simple: keep growing, keep creating, and build AI products my
 daughter can one day look at and feel proud of.
 
-═══════════════════════════════════════════════════
+______
   `.trim(),
 }
 
