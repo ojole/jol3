@@ -24,7 +24,7 @@ export default function TopBar() {
   }, [])
 
   return (
-    <header className="bg-[var(--color-paper-dark)]/90 backdrop-blur-sm border-b border-[var(--color-border-dark)] px-3 py-1 flex items-center justify-between relative z-50">
+    <header data-ascii-blocker="true" className="bg-[var(--color-paper-dark)]/90 backdrop-blur-sm border-b border-[var(--color-border-dark)] px-3 py-1 flex items-center justify-between relative z-50">
       {/* Left: Brand */}
       <div className="flex items-center">
         <span className="text-sm font-mono font-semibold text-[var(--color-text-primary)] select-none">

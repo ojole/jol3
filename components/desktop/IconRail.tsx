@@ -11,6 +11,7 @@ interface IconRailProps {
 export default function IconRail({ items, side }: IconRailProps) {
   return (
     <aside
+      data-ascii-blocker="true"
       className={`
         w-28 md:w-32
         bg-transparent

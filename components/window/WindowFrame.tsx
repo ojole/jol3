@@ -57,6 +57,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   const [stickyResizing, setStickyResizing] = useState(false)
   const [isMobileViewport, setIsMobileViewport] = useState(false)
   const [showInfoPanel, setShowInfoPanel] = useState(false)
+  const [viewportWidth, setViewportWidth] = useState(0)
 
   // Focus on mount
   useEffect(() => {
@@ -75,6 +76,13 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     syncViewport()
     media.addEventListener('change', syncViewport)
     return () => media.removeEventListener('change', syncViewport)
+  }, [])
+
+  useEffect(() => {
+    const syncWidth = () => setViewportWidth(globalThis.window?.innerWidth || 0)
+    syncWidth()
+    globalThis.window?.addEventListener('resize', syncWidth)
+    return () => globalThis.window?.removeEventListener('resize', syncWidth)
   }, [])
 
   const handleMouseDown = () => {
@@ -285,8 +293,8 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
         return null
       }
       return (
-        <div className="absolute right-5 top-[66px] z-[65] w-[340px] max-w-[44vw]">
-          <div className="rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+        <div className="absolute right-5 top-[66px] z-[65] w-[348px] max-w-[44vw]">
+          <div className="max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
             <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
             <p className="mt-2">{projectInfo.what}</p>
             <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
@@ -300,21 +308,37 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       return null
     }
 
+    const panelWidth = 348
+    const panelGap = 24
+    const rightSpace = Math.max(0, viewportWidth - (window.x + window.width))
+    const leftSpace = Math.max(0, window.x)
+    const placeOnRight = rightSpace >= panelWidth + panelGap || rightSpace >= leftSpace
+
     return (
-      <div className="absolute left-[calc(100%+20px)] top-[56px] z-[65] hidden w-[340px] md:block">
-        <div className="pointer-events-none absolute -left-[96px] top-6 h-[72px] w-[96px]">
-          <span className="absolute left-0 top-[12px] h-[2px] w-[40px] bg-[#d8b361] opacity-80 animate-pulse" />
+      <div
+        className="absolute top-[56px] z-[65] hidden md:block"
+        style={
+          placeOnRight
+            ? { left: `calc(100% + ${panelGap}px)`, width: `${panelWidth}px` }
+            : { right: `calc(100% + ${panelGap}px)`, width: `${panelWidth}px` }
+        }
+      >
+        <div
+          className={`pointer-events-none absolute top-6 h-[72px] w-[108px] ${placeOnRight ? '-left-[108px]' : '-right-[108px]'}`}
+          style={placeOnRight ? undefined : { transform: 'scaleX(-1)' }}
+        >
+          <span className="absolute left-0 top-[14px] h-[2px] w-[44px] bg-gradient-to-r from-[#e4c477] to-[#bb9043] opacity-90 animate-pulse" />
           <span
-            className="absolute left-[34px] top-[12px] h-[2px] w-[26px] origin-left rotate-[28deg] bg-[#a98746] opacity-90 animate-pulse"
-            style={{ animationDelay: '120ms' }}
+            className="absolute left-[37px] top-[14px] h-[2px] w-[28px] origin-left rotate-[27deg] bg-[#b88a3f] opacity-90 animate-pulse"
+            style={{ animationDelay: '110ms' }}
           />
           <span
-            className="absolute left-[56px] top-[25px] h-[2px] w-[40px] bg-[#d8b361] opacity-80 animate-pulse"
-            style={{ animationDelay: '260ms' }}
+            className="absolute left-[61px] top-[27px] h-[2px] w-[47px] bg-gradient-to-r from-[#e4c477] to-[#bb9043] opacity-90 animate-pulse"
+            style={{ animationDelay: '220ms' }}
           />
-          <span className="absolute left-[53px] top-[22px] h-[8px] w-[8px] rounded-full border border-[#cba457] bg-[#f7d986]" />
+          <span className="absolute left-[58px] top-[24px] h-[8px] w-[8px] rounded-full border border-[#d4ad60] bg-[#f6db93] shadow-[0_0_5px_rgba(230,197,118,0.55)]" />
         </div>
-        <aside className="rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
+        <aside className="max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
           <p className="mt-2">{projectInfo.what}</p>
           <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
@@ -327,6 +351,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   const windowContent = isStickyNote ? (
     <div
       ref={frameRef}
+      data-ascii-blocker="true"
       className="sticky-note-handle absolute pointer-events-auto flex flex-col"
       style={{
         ...style,
@@ -419,6 +444,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   ) : (
     <div
       ref={frameRef}
+      data-ascii-blocker="true"
       className="absolute pointer-events-auto bg-white rounded-md overflow-hidden flex flex-col shadow-2xl"
       style={{
         ...style,
@@ -581,7 +607,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
   // If maximized, don't make it draggable
   if (window.isMaximized) {
     return (
-      <div style={{ position: 'absolute', inset: 0, zIndex: window.zIndex }}>
+      <div data-ascii-blocker="true" style={{ position: 'absolute', inset: 0, zIndex: window.zIndex }}>
         {windowContent}
       </div>
     )
@@ -599,7 +625,7 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
       position={{ x: window.x, y: window.y }}
       onStop={handleDragStop}
     >
-      <div ref={nodeRef} style={{ position: 'absolute', zIndex: window.zIndex }}>
+      <div ref={nodeRef} data-ascii-blocker="true" style={{ position: 'absolute', zIndex: window.zIndex }}>
         {windowContent}
         {renderProjectInfoPanel('outside')}
       </div>

@@ -45,6 +45,7 @@ export default function DesktopShell() {
         {/* Main Desktop Area */}
         <div
           className="flex-1 flex relative overflow-hidden"
+          data-ascii-surface="true"
           style={{
             paddingBottom: 'calc(var(--taskbar-height-mobile) + var(--safe-bottom))',
           }}
@@ -55,7 +56,7 @@ export default function DesktopShell() {
           <IconRail items={leftRailItems} side="left" />
 
           {/* Center Workspace (Windows) */}
-          <div className="flex-1 relative z-10">
+          <div className="flex-1 relative z-10" data-ascii-surface="true">
             <WindowManager />
           </div>
         </div>

@@ -78,6 +78,7 @@ export default function Taskbar() {
 
   return (
     <div
+      data-ascii-blocker="true"
       className="fixed left-0 right-0 bottom-0 bg-[#e8dfe0] border-t-[3px] border-t-[#fef4f5] px-2 flex items-center gap-2 z-50 shadow-sm md:relative"
       style={{
         paddingTop: '0.5rem',

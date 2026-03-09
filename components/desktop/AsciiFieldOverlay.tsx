@@ -10,6 +10,7 @@ const INJECT_RADIUS_PX = 92
 const WAKE_RADIUS_PX = 132
 const MOBILE_INJECT_RADIUS_PX = 72
 const MOBILE_WAKE_RADIUS_PX = 108
+const SIGNAL_VISIBLE_THRESHOLD = 0.03
 const TAU = Math.PI * 2
 const GLYPH_HEAD = '3'
 const GLYPH_WAKE = '>'
@@ -152,6 +153,25 @@ export default function AsciiFieldOverlay() {
       pointer.active = true
     }
 
+    const resetPointer = () => {
+      pointer.active = false
+      pointer.speed = 0
+      pointer.vx = 0
+      pointer.vy = 0
+      pointer.pointerId = null
+    }
+
+    const canActivateAtPoint = (clientX: number, clientY: number) => {
+      const topElement = document.elementFromPoint(clientX, clientY) as HTMLElement | null
+      if (!topElement) {
+        return false
+      }
+      if (topElement.closest('[data-ascii-blocker="true"]')) {
+        return false
+      }
+      return Boolean(topElement.closest('[data-ascii-surface="true"]'))
+    }
+
     const injectPulse = (
       centerX: number,
       centerY: number,
@@ -203,6 +223,9 @@ export default function AsciiFieldOverlay() {
     }
 
     const handlePointerDown = (event: PointerEvent) => {
+      if (!canActivateAtPoint(event.clientX, event.clientY)) {
+        return
+      }
       pointer.pointerId = event.pointerId
       updatePointer(event.clientX, event.clientY)
       emitInteractionPulse()
@@ -212,31 +235,62 @@ export default function AsciiFieldOverlay() {
       if (event.pointerType !== 'mouse' && pointer.pointerId !== event.pointerId) {
         return
       }
+      if (!canActivateAtPoint(event.clientX, event.clientY)) {
+        if (event.pointerType === 'mouse') {
+          resetPointer()
+        }
+        return
+      }
       updatePointer(event.clientX, event.clientY)
+      if (event.pointerType !== 'mouse') {
+        emitInteractionPulse()
+      }
     }
 
     const handlePointerUp = (event: PointerEvent) => {
       if (pointer.pointerId !== null && pointer.pointerId !== event.pointerId) {
         return
       }
-      pointer.pointerId = null
-      pointer.active = false
-      pointer.speed = 0
+      resetPointer()
     }
 
     const handlePointerLeave = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse') {
         return
       }
-      pointer.active = false
-      pointer.speed = 0
-      pointer.pointerId = null
+      resetPointer()
     }
 
     const handleBlur = () => {
-      pointer.active = false
-      pointer.speed = 0
-      pointer.pointerId = null
+      resetPointer()
+    }
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const firstTouch = event.touches[0]
+      if (!firstTouch) {
+        return
+      }
+      if (!canActivateAtPoint(firstTouch.clientX, firstTouch.clientY)) {
+        return
+      }
+      updatePointer(firstTouch.clientX, firstTouch.clientY)
+      emitInteractionPulse()
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const firstTouch = event.touches[0]
+      if (!firstTouch) {
+        return
+      }
+      if (!canActivateAtPoint(firstTouch.clientX, firstTouch.clientY)) {
+        return
+      }
+      updatePointer(firstTouch.clientX, firstTouch.clientY)
+      emitInteractionPulse()
+    }
+
+    const handleTouchEnd = () => {
+      resetPointer()
     }
 
     const stepField = (time: number, dt: number) => {
@@ -331,7 +385,7 @@ export default function AsciiFieldOverlay() {
       if (pointer.active && pointer.speed > MIN_ACTIVE_SPEED) {
         const injectRadius = isDesktopViewport ? INJECT_RADIUS_PX : MOBILE_INJECT_RADIUS_PX
         const wakeRadius = isDesktopViewport ? WAKE_RADIUS_PX : MOBILE_WAKE_RADIUS_PX
-        const energyBoost = 0.26 + pointer.speed * 1.15
+        const energyBoost = 0.34 + pointer.speed * 1.3
         injectPulse(
           smooth.x,
           smooth.y,
@@ -365,7 +419,7 @@ export default function AsciiFieldOverlay() {
             Math.sin((col * 0.23 + row * 0.17) + time * FLOW_TIME_SPEED * 10.8) * 0.5 + 0.5
           const signal = pulse * 1.08 + velocityMag * 0.22
 
-          if (signal <= 0.055) {
+          if (signal <= SIGNAL_VISIBLE_THRESHOLD) {
             continue
           }
 
@@ -376,9 +430,9 @@ export default function AsciiFieldOverlay() {
             glyph = GLYPH_WAKE
           }
 
-          const alphaBase = glyph === GLYPH_HEAD ? 0.3 : glyph === GLYPH_WAKE ? 0.22 : 0.14
+          const alphaBase = glyph === GLYPH_HEAD ? 0.36 : glyph === GLYPH_WAKE ? 0.28 : 0.2
           const alpha = clamp01(alphaBase + signal * 0.56 + shimmer * 0.07)
-          if (alpha < 0.08) {
+          if (alpha < 0.1) {
             continue
           }
 
@@ -395,11 +449,15 @@ export default function AsciiFieldOverlay() {
 
     const observer = new ResizeObserver(() => resize())
     observer.observe(container)
-    container.addEventListener('pointerdown', handlePointerDown, { passive: true })
-    container.addEventListener('pointermove', handlePointerMove, { passive: true })
-    container.addEventListener('pointerup', handlePointerUp, { passive: true })
-    container.addEventListener('pointercancel', handlePointerUp, { passive: true })
-    container.addEventListener('pointerleave', handlePointerLeave, { passive: true })
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true })
+    window.addEventListener('pointermove', handlePointerMove, { passive: true })
+    window.addEventListener('pointerup', handlePointerUp, { passive: true })
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true })
+    window.addEventListener('pointerleave', handlePointerLeave, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true })
     window.addEventListener('resize', resize)
     window.addEventListener('blur', handleBlur, { passive: true })
     viewportMedia.addEventListener('change', syncViewportMode)
@@ -407,11 +465,15 @@ export default function AsciiFieldOverlay() {
     return () => {
       running = false
       observer.disconnect()
-      container.removeEventListener('pointerdown', handlePointerDown)
-      container.removeEventListener('pointermove', handlePointerMove)
-      container.removeEventListener('pointerup', handlePointerUp)
-      container.removeEventListener('pointercancel', handlePointerUp)
-      container.removeEventListener('pointerleave', handlePointerLeave)
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+      window.removeEventListener('pointerleave', handlePointerLeave)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+      window.removeEventListener('touchcancel', handleTouchEnd)
       window.removeEventListener('resize', resize)
       window.removeEventListener('blur', handleBlur)
       viewportMedia.removeEventListener('change', syncViewportMode)
@@ -425,7 +487,7 @@ export default function AsciiFieldOverlay() {
     <div
       ref={containerRef}
       className="absolute inset-0 z-[1] overflow-hidden"
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', pointerEvents: 'none' }}
       data-wallpaper-interactive="true"
     >
       <canvas
