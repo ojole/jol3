@@ -34,9 +34,8 @@ export default function DesktopShell() {
   useEffect(() => {
     let keyboardLikelyOpen = false
     let rafId: number | null = null
-    let settleRafId: number | null = null
-    let settleUntil = 0
     let suppressSnapUntil = 0
+    let lastSnapAt = 0
     let scheduledTimers: number[] = []
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
@@ -52,11 +51,6 @@ export default function DesktopShell() {
     const clearScheduledSnap = () => {
       scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
       scheduledTimers = []
-      settleUntil = 0
-      if (settleRafId !== null) {
-        globalThis.window?.cancelAnimationFrame(settleRafId)
-        settleRafId = null
-      }
     }
 
     const resyncHitTesting = () => {
@@ -76,6 +70,15 @@ export default function DesktopShell() {
     }
 
     const snapViewport = (soft = false) => {
+      const now = nowMs()
+      if (now - lastSnapAt < 120) {
+        return
+      }
+      const wasOffset =
+        (globalThis.window?.scrollX || 0) !== 0 ||
+        (globalThis.window?.scrollY || 0) !== 0 ||
+        hasTopBarDrift()
+
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0 || !soft) {
         globalThis.window?.scrollTo(0, 0)
       }
@@ -87,7 +90,10 @@ export default function DesktopShell() {
       if (globalThis.document?.body) {
         globalThis.document.body.scrollTop = 0
       }
-      resyncHitTesting()
+      lastSnapAt = now
+      if (wasOffset) {
+        resyncHitTesting()
+      }
     }
 
     const hasTopBarDrift = () => {
@@ -103,7 +109,7 @@ export default function DesktopShell() {
       if (!vv) {
         return false
       }
-      return Math.abs(vv.scale - 1) > 0.001 || vv.offsetTop > 0.5 || vv.pageTop > 0.5
+      return Math.abs(vv.scale - 1) > 0.002 || vv.offsetTop > 2
     }
 
     const hasDesktopDrift = () => {
@@ -124,33 +130,9 @@ export default function DesktopShell() {
       return !keyboardLikelyOpen && !isKeyboardViewportCompressed() && !isSnapSuppressed()
     }
 
-    const startSettleLoop = (durationMs: number) => {
-      const now = globalThis.performance?.now() || Date.now()
-      settleUntil = Math.max(settleUntil, now + durationMs)
-      if (settleRafId !== null) {
-        return
-      }
-      const tick = () => {
-        const frameNow = globalThis.performance?.now() || Date.now()
-        const { open } = readKeyboardState()
-        if (!open && canSnapViewport() && hasDesktopDrift()) {
-          snapViewport(true)
-        }
-        if (frameNow < settleUntil) {
-          settleRafId = globalThis.window?.requestAnimationFrame(tick) ?? null
-        } else {
-          settleRafId = null
-        }
-      }
-      settleRafId = globalThis.window?.requestAnimationFrame(tick) ?? null
-    }
-
     const scheduleSnap = (delays: number[], suppressMs = 260) => {
       clearScheduledSnap()
       blockSnap(suppressMs)
-      if (canSnapViewport()) {
-        snapViewport(true)
-      }
       delays.forEach((delay) => {
         const timerId = globalThis.window?.setTimeout(() => {
           if (canSnapViewport()) {
@@ -161,8 +143,6 @@ export default function DesktopShell() {
           scheduledTimers.push(timerId)
         }
       })
-      const longestDelay = delays.length ? Math.max(...delays) : 0
-      startSettleLoop(longestDelay + 900)
     }
 
     const isEditableElement = (node: Element | null) => {
@@ -210,7 +190,6 @@ export default function DesktopShell() {
           return
         }
         if (canSnapViewport() && hasDesktopDrift()) {
-          startSettleLoop(520)
           snapViewport(true)
         }
       }) ?? null
@@ -263,24 +242,12 @@ export default function DesktopShell() {
       scheduleSnap([120, 220, 380, 580], 520)
     }
 
-    const monitorKeyboardClose = () => {
-      const { justClosed } = readKeyboardState()
-      if (justClosed) {
-        scheduleSnap([90, 200, 360, 560], 260)
-      } else if (canSnapViewport() && hasDesktopDrift()) {
-        startSettleLoop(520)
-        snapViewport(true)
-      }
-    }
-
     const handleOrientationChange = () => {
       stableViewportHeight =
         globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || stableViewportHeight
       keyboardLikelyOpen = false
       scheduleSnap([140, 320, 540], 320)
     }
-
-    const intervalId = globalThis.window?.setInterval(monitorKeyboardClose, 220)
 
     globalThis.window?.addEventListener('focusin', handleFocusIn, true)
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
@@ -301,12 +268,6 @@ export default function DesktopShell() {
     return () => {
       if (rafId !== null) {
         globalThis.window?.cancelAnimationFrame(rafId)
-      }
-      if (settleRafId !== null) {
-        globalThis.window?.cancelAnimationFrame(settleRafId)
-      }
-      if (typeof intervalId === 'number') {
-        globalThis.window?.clearInterval(intervalId)
       }
       clearScheduledSnap()
       globalThis.window?.removeEventListener('focusin', handleFocusIn, true)
