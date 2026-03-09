@@ -40,6 +40,16 @@ export default function DesktopShell() {
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
 
+    const clearScheduledSnap = () => {
+      scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
+      scheduledTimers = []
+      settleUntil = 0
+      if (settleRafId !== null) {
+        globalThis.window?.cancelAnimationFrame(settleRafId)
+        settleRafId = null
+      }
+    }
+
     const snapViewport = (soft = false) => {
       if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0 || !soft) {
         globalThis.window?.scrollTo(0, 0)
@@ -96,8 +106,7 @@ export default function DesktopShell() {
     }
 
     const scheduleSnap = (delays: number[]) => {
-      scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
-      scheduledTimers = []
+      clearScheduledSnap()
       snapViewport(true)
       delays.forEach((delay) => {
         const timerId = globalThis.window?.setTimeout(() => {
@@ -110,7 +119,7 @@ export default function DesktopShell() {
         }
       })
       const longestDelay = delays.length ? Math.max(...delays) : 0
-      startSettleLoop(longestDelay + 1600)
+      startSettleLoop(longestDelay + 900)
     }
 
     const isEditableElement = (node: Element | null) => {
@@ -148,7 +157,11 @@ export default function DesktopShell() {
       }
       rafId = globalThis.window?.requestAnimationFrame(() => {
         rafId = null
-        const { justClosed } = readKeyboardState()
+        const { open, justClosed } = readKeyboardState()
+        if (open) {
+          clearScheduledSnap()
+          return
+        }
         if (justClosed) {
           scheduleSnap([90, 200, 360, 560])
           return
@@ -164,12 +177,18 @@ export default function DesktopShell() {
       const target = event.target
       if (target instanceof HTMLIFrameElement) {
         keyboardLikelyOpen = true
+        clearScheduledSnap()
         return
       }
       if (!isEditableElement(target as Element | null)) {
         return
       }
       keyboardLikelyOpen = true
+      clearScheduledSnap()
+    }
+
+    const handleInteractionIntent = () => {
+      clearScheduledSnap()
     }
 
     const handleFocusOut = () => {
@@ -221,6 +240,11 @@ export default function DesktopShell() {
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
     globalThis.window?.addEventListener('keydown', handleSubmitIntent, true)
     globalThis.window?.addEventListener('submit', handleFormSubmit, true)
+    globalThis.window?.addEventListener('pointerdown', handleInteractionIntent, true)
+    globalThis.window?.addEventListener('touchstart', handleInteractionIntent, {
+      passive: true,
+      capture: true,
+    })
     globalThis.window?.addEventListener('scroll', handleViewportShift, { passive: true })
     globalThis.window?.addEventListener('resize', handleViewportShift, { passive: true })
     globalThis.window?.addEventListener('orientationchange', handleOrientationChange)
@@ -238,11 +262,13 @@ export default function DesktopShell() {
       if (typeof intervalId === 'number') {
         globalThis.window?.clearInterval(intervalId)
       }
-      scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
+      clearScheduledSnap()
       globalThis.window?.removeEventListener('focusin', handleFocusIn, true)
       globalThis.window?.removeEventListener('focusout', handleFocusOut, true)
       globalThis.window?.removeEventListener('keydown', handleSubmitIntent, true)
       globalThis.window?.removeEventListener('submit', handleFormSubmit, true)
+      globalThis.window?.removeEventListener('pointerdown', handleInteractionIntent, true)
+      globalThis.window?.removeEventListener('touchstart', handleInteractionIntent, true)
       globalThis.window?.removeEventListener('scroll', handleViewportShift)
       globalThis.window?.removeEventListener('resize', handleViewportShift)
       globalThis.window?.removeEventListener('orientationchange', handleOrientationChange)
