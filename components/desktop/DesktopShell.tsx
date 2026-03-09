@@ -34,14 +34,52 @@ export default function DesktopShell() {
   useEffect(() => {
     let keyboardLikelyOpen = false
     let rafId: number | null = null
+    let settleRafId: number | null = null
+    let settleUntil = 0
     let scheduledTimers: number[] = []
     let stableViewportHeight =
       globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || 0
 
-    const snapViewport = () => {
-      if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0) {
+    const snapViewport = (soft = false) => {
+      const activeElement = globalThis.document?.activeElement
+      if (
+        activeElement instanceof HTMLIFrameElement ||
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement
+      ) {
+        activeElement.blur()
+      }
+      globalThis.document?.getElementById('desktop-top-bar')?.scrollIntoView({ block: 'start' })
+      if (globalThis.window?.scrollX !== 0 || globalThis.window?.scrollY !== 0 || !soft) {
         globalThis.window?.scrollTo(0, 0)
       }
+      if (globalThis.document?.documentElement) {
+        globalThis.document.documentElement.scrollTop = 0
+      }
+      if (globalThis.document?.body) {
+        globalThis.document.body.scrollTop = 0
+      }
+    }
+
+    const startSettleLoop = (durationMs: number) => {
+      const now = globalThis.performance?.now() || Date.now()
+      settleUntil = Math.max(settleUntil, now + durationMs)
+      if (settleRafId !== null) {
+        return
+      }
+      const tick = () => {
+        const frameNow = globalThis.performance?.now() || Date.now()
+        const { open } = readKeyboardState()
+        if (!open) {
+          snapViewport(true)
+        }
+        if (frameNow < settleUntil) {
+          settleRafId = globalThis.window?.requestAnimationFrame(tick) ?? null
+        } else {
+          settleRafId = null
+        }
+      }
+      settleRafId = globalThis.window?.requestAnimationFrame(tick) ?? null
     }
 
     const scheduleSnap = (delays: number[]) => {
@@ -57,6 +95,8 @@ export default function DesktopShell() {
           scheduledTimers.push(timerId)
         }
       })
+      const longestDelay = delays.length ? Math.max(...delays) : 0
+      startSettleLoop(longestDelay + 720)
     }
 
     const isEditableElement = (node: Element | null) => {
@@ -100,7 +140,12 @@ export default function DesktopShell() {
     }
 
     const handleFocusIn = (event: FocusEvent) => {
-      if (!isEditableElement(event.target as Element | null)) {
+      const target = event.target
+      if (target instanceof HTMLIFrameElement) {
+        keyboardLikelyOpen = true
+        return
+      }
+      if (!isEditableElement(target as Element | null)) {
         return
       }
       keyboardLikelyOpen = true
@@ -132,12 +177,23 @@ export default function DesktopShell() {
       scheduleSnap([120, 220, 380, 580])
     }
 
+    const monitorKeyboardClose = () => {
+      const { justClosed } = readKeyboardState()
+      if (justClosed) {
+        scheduleSnap([90, 200, 360, 560])
+      } else if (!keyboardLikelyOpen && (globalThis.window?.scrollY || 0) > 0) {
+        snapViewport(true)
+      }
+    }
+
     const handleOrientationChange = () => {
       stableViewportHeight =
         globalThis.window?.visualViewport?.height || globalThis.window?.innerHeight || stableViewportHeight
       keyboardLikelyOpen = false
       scheduleSnap([140, 320, 540])
     }
+
+    const intervalId = globalThis.window?.setInterval(monitorKeyboardClose, 220)
 
     globalThis.window?.addEventListener('focusin', handleFocusIn, true)
     globalThis.window?.addEventListener('focusout', handleFocusOut, true)
@@ -152,6 +208,12 @@ export default function DesktopShell() {
     return () => {
       if (rafId !== null) {
         globalThis.window?.cancelAnimationFrame(rafId)
+      }
+      if (settleRafId !== null) {
+        globalThis.window?.cancelAnimationFrame(settleRafId)
+      }
+      if (typeof intervalId === 'number') {
+        globalThis.window?.clearInterval(intervalId)
       }
       scheduledTimers.forEach((timerId) => globalThis.window?.clearTimeout(timerId))
       globalThis.window?.removeEventListener('focusin', handleFocusIn, true)

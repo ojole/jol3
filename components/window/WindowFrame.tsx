@@ -357,6 +357,10 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     const outsideWidth = preferredPlacement?.width || panelMinWidth
     const panelLocalLeft = preferredPlacement?.localLeft || 0
     const connectorFromRightSide = preferredPlacement?.side === 'right'
+    const connectorWidth = 112
+    const connectorLocalLeft = connectorFromRightSide
+      ? panelLocalLeft - connectorWidth
+      : panelLocalLeft + outsideWidth
 
     if (shouldUseInsideFallback && placement === 'inside') {
       return (
@@ -379,37 +383,45 @@ export default function WindowFrame({ window, children }: WindowFrameProps) {
     }
 
     return (
-      <div
-        className="absolute top-[56px] hidden md:block pointer-events-auto"
-        style={{ left: `${panelLocalLeft}px`, width: `${outsideWidth}px`, zIndex: window.zIndex + 4 }}
-      >
+      <>
         <div
-          className={`pointer-events-none absolute top-6 h-[72px] w-[108px] ${connectorFromRightSide ? '-left-[108px]' : '-right-[108px]'}`}
-          style={connectorFromRightSide ? undefined : { transform: 'scaleX(-1)' }}
+          className="absolute top-[86px] hidden md:block pointer-events-none"
+          style={{
+            left: `${connectorLocalLeft}px`,
+            width: `${connectorWidth}px`,
+            zIndex: Math.max(1, window.zIndex - 1),
+          }}
         >
-          <span className="absolute left-0 top-[14px] h-[2px] w-[44px] bg-gradient-to-r from-[#e4c477] to-[#bb9043] opacity-90 animate-pulse" />
           <span
-            className="absolute left-[37px] top-[14px] h-[2px] w-[28px] origin-left rotate-[27deg] bg-[#b88a3f] opacity-90 animate-pulse"
-            style={{ animationDelay: '110ms' }}
+            className="absolute left-0 top-[1px] h-[2px] rounded-full bg-gradient-to-r from-[#e3c173] to-[#b98d43] opacity-90"
+            style={{
+              width: `${connectorWidth - 10}px`,
+              transform: connectorFromRightSide ? undefined : 'scaleX(-1)',
+              transformOrigin: connectorFromRightSide ? 'left center' : 'right center',
+            }}
           />
           <span
-            className="absolute left-[61px] top-[27px] h-[2px] w-[47px] bg-gradient-to-r from-[#e4c477] to-[#bb9043] opacity-90 animate-pulse"
-            style={{ animationDelay: '220ms' }}
+            className="absolute top-[-2px] h-[8px] w-[8px] rounded-full border border-[#d0a95f] bg-[#f6da94] shadow-[0_0_5px_rgba(230,197,118,0.4)]"
+            style={{ left: connectorFromRightSide ? `${connectorWidth - 13}px` : '2px' }}
           />
-          <span className="absolute left-[58px] top-[24px] h-[8px] w-[8px] rounded-full border border-[#d4ad60] bg-[#f6db93] shadow-[0_0_5px_rgba(230,197,118,0.55)]" />
         </div>
-        <aside
-          className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
-          onWheel={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-          style={{ touchAction: 'pan-y' }}
+        <div
+          className="absolute top-[56px] hidden md:block pointer-events-auto"
+          style={{ left: `${panelLocalLeft}px`, width: `${outsideWidth}px`, zIndex: window.zIndex + 4 }}
         >
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
-          <p className="mt-2">{projectInfo.what}</p>
-          <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
-          <p className="mt-2 text-[#f0dfac]">{projectInfo.inspiration}</p>
-        </aside>
-      </div>
+          <aside
+            className="project-info-scroll pointer-events-auto overscroll-contain max-h-[min(62vh,460px)] overflow-y-auto rounded-md border border-[#7f6838] bg-[rgba(23,18,11,0.94)] px-4 py-4 font-mono text-[12px] leading-6 text-[#f4e8c2] shadow-[0_0_0_1px_rgba(255,224,140,0.14),0_10px_28px_rgba(0,0,0,0.35)]"
+            onWheel={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            style={{ touchAction: 'pan-y' }}
+          >
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[#f7d986]">{projectInfo.title}</p>
+            <p className="mt-2">{projectInfo.what}</p>
+            <p className="mt-2 text-[#e7d49b]">{projectInfo.technical}</p>
+            <p className="mt-2 text-[#f0dfac]">{projectInfo.inspiration}</p>
+          </aside>
+        </div>
+      </>
     )
   }
 
