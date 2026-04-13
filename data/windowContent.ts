@@ -10,100 +10,115 @@ jol3@jol3.com
 
 PROFILE
 
-AI and systems-focused builder with 10+ years of experience translating
-complex workflows into practical products. Background spans business operations,
-product strategy, analytics, and data engineering, with a consistent focus on
-measurable outcomes, usability, and cross-functional execution.
+13 years building across every layer of a company: operations,
+product, engineering. Four years ago, AI took over everything.
 
-Known for operating across technical and non-technical teams, improving
-customer-facing systems, and shipping AI-assisted tools in regulated
-environments.
+Self-directed researcher, production systems builder, and
+independent developer. I build things that work, ship them,
+and document what I learn. Currently running active AI safety
+research alongside my engineering work.
 
 ______
 
 HIGHLIGHTS
 
-• Built a GPT-powered trademark classifier that improved filing quality and
-  generated a $720K net performance increase.
+- Built a GPT-powered trademark classifier generating $720K
+  in annual revenue impact. Still running in production.
 
-• Led CRM/process redesign initiatives that improved operational throughput
-  by 40%.
+- Leading a 20,000+ line ground-up CRM rebuild in Python
+  and JavaScript consolidating a decade of institutional
+  knowledge into a six-bucket lifecycle system.
 
-• Designed and implemented an LLM-powered internal knowledge system that
-  reduced handling time by ~20%.
+- Led workflow redesign improving operational throughput 40%.
 
-• Shipped mobile wallet/cart improvements that increased mobile conversion
-  by 10%.
+- Running independent empirical AI research (Amoji) with
+  40+ disciplined experiments, locked benchmarks, and
+  ablation studies across a symbolic AI compression framework.
 
-• Drove major fulfillment and operational improvements that protected and
-  recovered significant order value.
-
-• Built and launched EMCRYPTED, an original puzzle/game concept, as a live
-  MVP (product design + implementation).
+- Built Rorrim, a welfare-adjacent research framework
+  investigating AI self-model behavior under introspective
+  pressure. Pilot trials in progress.
 
 ______
 
 EXPERIENCE
 
-Swyft Filings — Houston, TX
+SwyftFilings — Houston, TX
 Data Engineering Manager (current)
-Previous roles: Business Intelligence Manager, Business Operations Manager,
-Product/Project leadership roles, and customer-facing growth roles
-2017–Present
+Progression: Account Manager, Product Owner, Project Manager,
+Business Operations Manager, BI Manager,
+Data Engineering Manager
+2017 to Present
 
-• Lead AI/data initiatives across product, operations, and support workflows.
-• Build practical automation and decision-support systems used by internal teams.
-• Partner cross-functionally with engineering, CX, legal/compliance-adjacent,
-  and business stakeholders.
-• Translate ambiguous business requirements into shipped, measurable systems.
-• Improve internal tooling quality, data reliability, and process clarity.
+- Lead AI and data engineering initiatives across product,
+  operations, and support workflows.
+- Build Python-backed automation and decision support systems
+  used daily by internal teams.
+- Translate ambiguous business requirements into shipped,
+  measurable systems.
+- Cross-functional bridge between engineering, operations,
+  legal, and product on every major system change.
 
 HostGator — Houston, TX
 Small Business Consultant
-2013–2017
+2013 to 2017
 
-• Supported SMB customers with technical decision-making and digital setup.
-• Simplified complex technical topics into clear, actionable recommendations.
-• Consistently recognized for high performance and customer impact.
-
-______
-
-CORE CAPABILITIES
-
-AI Product Implementation
-LLM Workflow Design
-Data & Process Optimization
-Cross-Functional Program Execution
-Operational Analytics
-Python / SQL
-Internal Tooling & Enablement
-Customer Experience Systems
-Documentation & Knowledge Architecture
-Regulated Workflow Navigation (USPTO + multi-state operations)
+- Consistently top-performing consultant translating complex
+  hosting products into clear customer value.
+- Selected for Google Workspace enablement training.
 
 ______
 
-SELECT PROJECTS
+RESEARCH
 
-EMCRYPTED
-Emoji-based puzzle/trivia application developed as a live MVP.
+Amoji — Independent AI Safety Research
+Symbolic AI compression research. Hypothesis: can emoji
+function as a compact structured interlingua for AI,
+reducing computational overhead while preserving semantic
+meaning? 40+ experiments, locked benchmarks, ablation
+studies. Python throughout.
+github.com/ojole/amoji
 
-FAIV / Council Framework
-Structured multi-perspective reasoning framework for collaborative AI-assisted
-decision workflows.
-
-AI Knowledge Tooling
-Internal LLM-assisted support and operations tools focused on speed, consistency,
-and usability.
+Rorrim — AI Welfare Research Framework
+Methodology for investigating AI self-model behavior under
+introspective pressure. Automated trial infrastructure,
+locked prompt library, coding interface, analysis pipeline.
+Pilot trials running.
+github.com/ojole/rorrim
 
 ______
 
-WORK STYLE
+PROJECTS
 
-I build practical systems that reduce friction, increase clarity, and scale
-good decisions. I care about outcomes, maintainability, and the human experience
-of using the product.
-  `.trim(),
+emcrypted.com
+Emoji-based film trivia game shipped end-to-end.
+Data modeling, app logic, UI design, deployment.
+
+faiv.ai
+Philosophical AI council framework as a full chat
+application. Explores multi-perspective deliberation
+and questions of AI consciousness and machine experience.
+Built solo, full stack.
+
+______
+
+CORE SKILLS
+
+Python, JavaScript, SQL, REST APIs, Claude API,
+OpenAI API, Prompt Engineering, LLM Evaluation,
+Empirical Research Design, Ablation Studies,
+Benchmark Design, Agentic Workflows, Full Stack
+Development, Data Engineering, Pipeline Automation
+
+______
+
+APPROACH
+
+I build practical systems that reduce friction, increase
+clarity, and scale good decisions. I care about outcomes,
+maintainability, and the human experience of using the
+product. I cannot stop thinking about what AI systems
+fundamentally are. Both of those things are true at once.`.trim(),
 }
 
 export const aboutMeContent = {
